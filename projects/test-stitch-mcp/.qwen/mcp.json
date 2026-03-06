@@ -1,0 +1,18 @@
+{
+    "mcpServers": {
+        "dev-tools": {
+            "command": "stitch-mcp.cmd",
+            "args": [
+                "C:/Users/nguye/Downloads/ai-dev-team/mcp-server/dist/index.js"
+            ],
+            "env": {}
+        },
+        "stitch-mcp": {
+            "command": "node",
+            "args": [
+                ""
+            ],
+            "env": {}
+        }
+    }
+}

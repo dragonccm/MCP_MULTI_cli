@@ -1,0 +1,19 @@
+{
+    "mcpServers": {
+        "dev-tools": {
+            "command": "node",
+            "args": [
+                "mcp-server/dist/index.js"
+            ],
+            "env": {}
+        },
+        "stitch-mcp": {
+            "command": "npx",
+            "args": [
+                "--yes",
+                "@_davideast/stitch-mcp"
+            ],
+            "env": {}
+        }
+    }
+}

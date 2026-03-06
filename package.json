@@ -1,0 +1,44 @@
+{
+  "name": "ai-dev-team-root",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "prisma": {
+    "seed": "npx tsx src/backend/prisma/seed.ts"
+  },
+  "devDependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@playwright/test": "^1.58.2",
+    "@prisma/client": "^5.22.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/bcrypt": "^6.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "@vitest/coverage-v8": "^2.1.8",
+    "bcrypt": "^6.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.35.0",
+    "jsdom": "^24.1.1",
+    "lucide-react": "^0.577.0",
+    "prisma": "^5.22.0",
+    "radix-ui": "^1.4.3",
+    "react-hook-form": "^7.71.2",
+    "tailwind-merge": "^3.5.0",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "next": "^16.1.6",
+    "next-auth": "^4.24.13",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "zod": "^4.3.6"
+  }
+}

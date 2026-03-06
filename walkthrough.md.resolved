@@ -1,0 +1,93 @@
+# AI Dev Team — Walkthrough
+
+## Tổng kết
+
+Đã xây dựng hoàn chỉnh hệ thống **AI Dev Team Pipeline** — một quy trình phát triển phần mềm tự động mô phỏng phòng ban công nghệ với 7 vai trò, quality gates, và shared MCP tools cho 3 CLI.
+
+## Kiến trúc Pipeline & Interactive Console
+
+```mermaid
+graph TD
+    A[📝 Requirement Input] --> Z[👑 Phase 0: Chief Coordinator]
+    Z -->|Interactive Chat| A
+    Z -->|Requirement Finalized| B[🧠 PM Agent - Gemini CLI]
+    B -->|Streaming Output| C{🤔 User Feedback Loop}
+    C -->|Góp ý| B
+    C -->|Pass + Gate ✅| D[📋 BA Agent - Gemini CLI]
+    D -->|Streaming Output| E{🤔 User Feedback Loop}
+    E -->|Góp ý| D
+    E -->|Pass + Gate ✅| F[⚡ Parallel Dev Phase]
+    F --> G[🎨 Frontend - Gemini CLI + Stitch MCP]
+    F --> H[🔧 Backend - Gemini CLI]
+    G -->|Pass + Gate ✅| I[🧪 QA Agent - Gemini CLI]
+    H -->|Pass + Gate ✅| I
+    I -->|Pass + Gate ✅| J[🔍 QC Agent - Gemini CLI]
+    J -->|Pass + Gate ✅| K[🚀 Release - Gemini CLI]
+    K -->|Pass + Gate ✅| Y[📚 Phase Final: Archivist]
+    Y -->|Self-Training & Cleanup| L[✅ Production Ready]
+```
+
+💡 **Interactive Console**: Orchestrator giờ đây stream log trực tiếp (gõ từng chữ) như ChatGPT ngoài việc check Quality Gates. Sau mỗi agent phase, hệ thống sẽ tạm dừng để người dùng chat góp ý (Feedback Loop).
+
+## Quản lý File
+
+### Core
+| File | Mô tả |
+|------|--------|
+| [orchestrator.js](file:///c:/Users/nguye/Downloads/ai-dev-team/orchestrator.js) | Pipeline engine: 7 phases, quality gates, retry, parallel dev, **interactive feedback loop**, **live streaming** |
+
+### Agent Prompts (7 files)
+| File | Vai trò | CLI |
+|------|---------|-----|
+| [pm-prompt.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/pm-prompt.md) | Product Manager | Gemini |
+| [ba-prompt.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/ba-prompt.md) | Business Analyst | Gemini |
+| [frontend-prompt.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/frontend-prompt.md) | Frontend Developer | Gemini |
+| [backend-prompt.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/backend-prompt.md) | Backend Developer | Gemini |
+| [qa-prompt.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/qa-prompt.md) | QA Engineer | Gemini |
+| [qc-prompt.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/qc-prompt.md) | QC / Code Reviewer | Gemini |
+| [release-prompt.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/release-prompt.md) | Release Manager | Gemini |
+
+### Quality Gates (6 files)
+| File | Kiểm tra |
+|------|----------|
+| [pm-gate.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/gates/pm-gate.md) | PRD: objectives, KPIs, personas, risks |
+| [ba-gate.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/gates/ba-gate.md) | Stories: acceptance criteria, data models, API specs |
+| [dev-gate.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/gates/dev-gate.md) | Code: build, TypeScript, lint, architecture |
+| [qa-gate.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/gates/qa-gate.md) | Tests: coverage ≥85%, Lighthouse ≥90, security |
+| [qc-gate.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/gates/qc-gate.md) | Review: score ≥80/100, 0 critical issues |
+| [release-gate.md](file:///c:/Users/nguye/Downloads/ai-dev-team/agents/gates/release-gate.md) | Deploy: smoke test, version tag, rollback plan |
+
+### MCP Server (15 tools)
+| File | Mô tả |
+|------|--------|
+| [index.ts](file:///c:/Users/nguye/Downloads/ai-dev-team/mcp-server/src/index.ts) | MCP Server: file I/O, shell, git, browser, search, deploy, DB |
+| [package.json](file:///c:/Users/nguye/Downloads/ai-dev-team/mcp-server/package.json) | Dependencies |
+| [tsconfig.json](file:///c:/Users/nguye/Downloads/ai-dev-team/mcp-server/tsconfig.json) | TypeScript config |
+
+### CLI Configs
+| File | CLI |
+|------|-----|
+| [settings.json](file:///c:/Users/nguye/Downloads/ai-dev-team/.gemini/settings.json) | Gemini CLI |
+| [mcp.json](file:///c:/Users/nguye/Downloads/ai-dev-team/.claude/mcp.json) | Claude Code |
+
+## Verification Results
+
+| Check | Result |
+|-------|--------|
+| `node --check orchestrator.js` | ✅ Pass (bao gồm cả logic Readline mới) |
+| `npm install` (MCP server) | ✅ 0 vulnerabilities |
+| `tsc --noEmit` (TypeScript) | ✅ Clean compile |
+
+## Cách sử dụng
+
+```bash
+# 1. Build MCP Server
+cd mcp-server && npm run build
+
+# 2. Chạy pipeline (Giao diện giờ đây sẽ hiển thị Interactive Stream)
+node orchestrator.js "Xây dựng hệ thống quản lý trường học"
+
+# Pipeline sẽ tạm dừng sau mỗi bước và hỏi:
+# 🤔 Bạn có muốn điều chỉnh gì không?
+# -> Gõ feedback để sửa, hoặc nhấn Enter để đi tiếp!
+```

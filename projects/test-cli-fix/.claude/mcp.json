@@ -1,0 +1,10 @@
+{
+    "mcpServers": {
+        "dev-tools": {
+            "command": "node",
+            "args": [
+                "C:/Users/nguye/Downloads/ai-dev-team/mcp-server/dist/index.js"
+            ]
+        }
+    }
+}
