@@ -7,7 +7,7 @@
 - **Migrations**: ✅ Applied (auto-runs on server start via `src/db/migrate.ts`)
 - **Indexes**: ✅ Created (email, status, category, slug, display_order, created_at)
 - **UUID generation**: `gen_random_uuid()` at database level
-- **Prisma schema**: ✅ Synced for schema management (`prisma/schema.prisma`)
+- **Prisma schema**: N/A — using raw pg queries with Pool
 
 ## API Endpoints
 
