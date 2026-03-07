@@ -1,0 +1,8 @@
+I will start by reading the instructions from the specified file.
+I will begin by reading the `docs/final-requirement.md` file to understand the project specifications and requirements.
+I will research "Refined Light Brutalism" to better define the UI requirements and look for common features and best practices for personal finance and asset management apps.
+I will search for "Neo-Brutalism UI design" and "Light Brutalism" separately to understand how to make them "refined," and I will also search for "personal finance app asset management best practices" and "AI financial advisor app features."
+I will use `google_web_search` to find more general information and better results.
+I'll research "personal finance app asset management best practices" and "AI financial advisor app features" to enhance the PRD.
+I have gathered enough information to draft the PRD, which will include project overview, business goals, KPIs, and detailed personas like An and Bình. I will now write the comprehensive PRD to `docs/prd.md`, covering functional and non-functional requirements, technical stack, and a three-phase roadmap.
+I have completed the PRD for **WTF-Note** and saved it to `docs/prd.md`. The document includes all required sections: project overview, business objectives with measurable KPIs, detailed user personas and journeys, functional and non-functional requirements, a comprehensive tech stack (React Native, Node.js, PostgreSQL, OpenAI/Claude), risk mitigation, and a clear three-phase roadmap. The PRD meets all quality gate criteria and has been marked as **APPROVED ✅**.

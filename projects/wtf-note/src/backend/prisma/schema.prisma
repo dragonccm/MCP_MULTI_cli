@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  password     String
+  name         String
+  currency     String    @default("VND")
+  locale       String    @default("vi-VN")
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  transactions  Transaction[]
+  categories    Category[]
+  debts         Debt[]
+  assets        Asset[]
+  budgets       Budget[]
+  aiInsights    AiInsight[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  type      String    // "income" | "expense"
+  icon      String    @default("📦")
+  color     String    @default("#333333")
+  isDefault Boolean   @default(false)
+  userId    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@unique([name, userId, type])
+  @@index([userId])
+  @@index([type])
+  @@map("categories")
+}
+
+model Transaction {
+  id         String    @id @default(cuid())
+  amount     Float
+  type       String    // "income" | "expense"
+  categoryId String
+  date       DateTime
+  note       String?
+  userId     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([date])
+  @@index([type])
+  @@map("transactions")
+}
+
+model Debt {
+  id                String    @id @default(cuid())
+  creditorDebtor    String
+  amount            Float
+  remainingBalance  Float
+  type              String    // "owed" | "owing"
+  dueDate           DateTime?
+  status            String    @default("active") // "active" | "paid" | "overdue"
+  isRecurring       Boolean   @default(false)
+  recurringSchedule String?   // "weekly" | "monthly"
+  note              String?
+  userId            String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments DebtPayment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([dueDate])
+  @@map("debts")
+}
+
+model DebtPayment {
+  id        String   @id @default(cuid())
+  debtId    String
+  amount    Float
+  date      DateTime
+  note      String?
+  createdAt DateTime @default(now())
+
+  debt Debt @relation(fields: [debtId], references: [id], onDelete: Cascade)
+
+  @@index([debtId])
+  @@map("debt_payments")
+}
+
+model Asset {
+  id        String    @id @default(cuid())
+  type      String    // "stock" | "crypto" | "real_estate"
+  userId    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Stock fields
+  ticker        String?
+  stockQuantity Float?
+  purchasePrice Float?
+  purchaseDate  DateTime?
+
+  // Crypto fields
+  coinSymbol     String?
+  cryptoQuantity Float?
+  avgBuyPrice    Float?
+  walletExchange String?
+
+  // Real estate fields
+  propertyName        String?
+  address             String?
+  realEstatePurchasePrice Float?
+  estimatedValue      Float?
+  propertyType        String?
+  ownershipPercentage Float?  @default(100)
+  linkedDebtId        String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([ticker])
+  @@index([coinSymbol])
+  @@map("assets")
+}
+
+model Budget {
+  id         String    @id @default(cuid())
+  categoryId String
+  amount     Float
+  month      Int
+  year       Int
+  userId     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([categoryId, month, year, userId])
+  @@index([userId])
+  @@index([month, year])
+  @@map("budgets")
+}
+
+model AiInsight {
+  id        String   @id @default(cuid())
+  type      String   // "spending_insight" | "budget_recommendation" | "net_worth_projection"
+  content   String   // JSON stringified
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@map("ai_insights")
+}
+
+model MarketPrice {
+  id          String   @id @default(cuid())
+  symbol      String
+  price       Float
+  change24h   Float?
+  type        String   // "stock" | "crypto"
+  lastUpdated DateTime @default(now())
+
+  @@unique([symbol, type])
+  @@index([symbol])
+  @@map("market_prices")
+}
