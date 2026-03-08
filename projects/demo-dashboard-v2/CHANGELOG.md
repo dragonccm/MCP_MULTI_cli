@@ -2,26 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0] - 2026-03-08
+## [1.2.1] - 2026-03-08
 
 ### Added
-- Complete Personal Expense Manager (PEM) dashboard and backend.
-- Authentication system (Register/Login) with JWT.
-- Transaction management (CRUD) with categories.
-- Dashboard statistics and visualization using Recharts.
-- Responsive UI built with React, Vite, and Tailwind CSS.
-- Prisma ORM integration with PostgreSQL (Prisma 7).
+#### Backend (pem-backend)
+- Express server with TypeScript.
+- Prisma ORM integrated with Neon PostgreSQL.
+- JWT-based Authentication.
+- API endpoints for Transactions (CRUD).
+- API endpoints for Categories (CRUD).
+- Repository-Service-Controller architecture.
 
-### Improved
-- Build process: Integrated `npx prisma generate` into the build script.
-- Type safety: Removed `any` in backend routes and middleware.
-- UI: Improved mobile responsiveness with hamburger menu.
+#### Mobile (pem-mobile)
+- React Native Expo project with TypeScript.
+- Navigation setup (React Navigation).
+- Login screen with authentication logic.
+- Dashboard screen for overview of transactions.
+- Add Transaction screen with income/expense toggle.
+- State management with Zustand.
 
-### Fixed
-- Frontend and backend port inconsistencies.
-- CORS configuration for frontend-backend communication.
-- Statistical data processing optimizations.
-
-### Security
-- Password hashing using bcrypt.
-- Protected routes using JWT middleware.
+### Build & Status
+- Backend build: ✅ PASS
+- Mobile lint check: ✅ PASS

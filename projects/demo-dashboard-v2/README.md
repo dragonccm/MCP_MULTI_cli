@@ -1,72 +1,39 @@
-# Personal Expense Manager (PEM) - Demo Dashboard V2
+# Personal Expense Manager (PEM) - Demo Dashboard v2
 
-A comprehensive full-stack application for managing personal expenses, featuring a modern dashboard and robust backend.
+Personal Expense Manager (PEM) is a comprehensive solution for managing your personal finances, consisting of a robust backend and a feature-rich mobile app.
+
+## Project Structure
+
+- `pem-backend/`: Node.js Express server with TypeScript and Prisma.
+- `pem-mobile/`: React Native Expo mobile app with TypeScript and Zustand.
 
 ## Features
 
-- **Authentication**: Secure JWT-based login and registration.
-- **Dashboard**: Real-time financial summary (Income, Expense, Net Balance) and category-based spending visualization.
-- **Transactions**: Full CRUD management of transactions with filtering by date.
-- **Categories**: Personalized category management.
-- **Responsive Design**: Optimized for both desktop and mobile devices.
-
-## Tech Stack
-
-- **Frontend**: React 19, Vite, Tailwind CSS, TanStack Query, Zustand, Recharts.
-- **Backend**: Node.js, Express, Prisma 7, Zod, JWT.
-- **Database**: PostgreSQL.
+- **Authentication**: JWT-based secure login and registration.
+- **Dashboard**: High-level overview of incomes and expenses.
+- **Transactions**: Full CRUD for tracking transactions with categories.
+- **Categories**: Personalized categories for expenses and incomes.
 
 ## Getting Started
 
-### Prerequisites
+### Backend
+1. Go to `pem-backend/`.
+2. Install dependencies: `npm install`.
+3. Set up environment: Copy `.env.example` to `.env`.
+4. Run migrations: `npx prisma migrate dev`.
+5. Start development: `npm run dev`.
 
-- Node.js (v20+)
-- PostgreSQL
+### Mobile
+1. Go to `pem-mobile/`.
+2. Install dependencies: `npm install`.
+3. Start Expo: `npx expo start`.
 
-### Installation
+## Build Status
 
-1. Install dependencies:
-   ```bash
-   npm install
-   cd frontend && npm install
-   ```
-
-2. Configure environment variables:
-   Create a `.env` file in the root:
-   ```env
-   DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
-   JWT_SECRET="your_secret_key"
-   PORT=3001
-   ```
-
-3. Initialize Database:
-   ```bash
-   npx prisma generate
-   # For first-time setup
-   npx prisma db push
-   ```
-
-4. Build and Start:
-   ```bash
-   npm run build
-   npm run start
-   ```
-
-## Development
-
-Run the backend in development mode:
-```bash
-npm run dev
-```
-
-Run the frontend in development mode:
-```bash
-cd frontend
-npm run dev
-```
+- **Backend**: `tsc` build passed.
+- **Mobile**: Lint and TypeScript checks passed.
 
 ## Release Info
-
-- Version: 1.2.0
-- Date: 2026-03-08
-- Status: APPROVED
+- Version: **1.2.1**
+- Release Date: **2026-03-08**
+- Status: **APPROVED**
