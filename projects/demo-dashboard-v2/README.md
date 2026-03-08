@@ -34,6 +34,6 @@ Personal Expense Manager (PEM) is a comprehensive solution for managing your per
 - **Mobile**: Lint and TypeScript checks passed.
 
 ## Release Info
-- Version: **1.2.1**
+- Version: **1.2.2**
 - Release Date: **2026-03-08**
 - Status: **APPROVED**

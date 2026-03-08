@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-03-08
+
+### Changed
+- Finalizing release workflow and documentation.
+- Updated `package.json` versions to 1.2.2.
+- Updated `README.md` and `docs/release-report.md`.
+
 ## [1.2.1] - 2026-03-08
 
 ### Added
