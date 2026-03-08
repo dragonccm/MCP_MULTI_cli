@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr list)",
+      "Bash(winget install --id GitHub.cli --silent)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh auth status)",
+      "Bash(where gh)",
+      "Read(//c/Program Files/GitHub CLI//**)",
+      "Bash(\"/c/Users/nguye/AppData/Local/Microsoft/WinGet/Links/gh.exe\" pr list)",
+      "Read(//c/Users/nguye/AppData/Local/Microsoft/WinGet/**)",
+      "Read(//c/Program Files/GitHub CLI/**)",
+      "Read(//c/Users/nguye/AppData/Local/**)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" pr list)"
+    ]
+  }
+}

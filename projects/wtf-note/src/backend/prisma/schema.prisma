@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  name         String
+  currency     String   @default("VND")
+  isVerified   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  transactions Transaction[]
+  categories   Category[]
+  budgets      Budget[]
+  portfolios   Portfolio[]
+  syncLogs     SyncLog[]
+
+  @@index([email])
+  @@index([deletedAt])
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  userId      String
+  categoryId  String?
+  type        String   // income, expense, debt, receivable, asset
+  amount      Float
+  currency    String   @default("VND")
+  description String?
+  date        DateTime
+  note        String?
+  status      String   @default("completed") // completed, pending, cancelled
+  metadata    String?  // JSON string for extra data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([type])
+  @@index([date])
+  @@index([deletedAt])
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  type      String   // income, expense
+  icon      String?
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@unique([userId, name, type])
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+model Budget {
+  id         String   @id @default(uuid())
+  userId     String
+  categoryId String?
+  amount     Float
+  month      Int
+  year       Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, categoryId, month, year])
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+model Portfolio {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets Asset[]
+
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+model Asset {
+  id            String   @id @default(uuid())
+  portfolioId   String
+  symbol        String
+  name          String?
+  type          String   // stock, crypto, fund, bond, other
+  quantity      Float
+  purchasePrice Float
+  purchaseDate  DateTime
+  currentPrice  Float?
+  lastUpdated   DateTime?
+  currency      String   @default("VND")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId])
+  @@index([symbol])
+  @@index([deletedAt])
+}
+
+model NewsArticle {
+  id          String   @id @default(uuid())
+  title       String
+  summary     String?
+  url         String
+  source      String?
+  imageUrl    String?
+  publishedAt DateTime
+  symbols     String?  // comma-separated related symbols
+  cachedAt    DateTime @default(now())
+
+  @@index([publishedAt])
+  @@index([symbols])
+}
+
+model SyncLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String   // create, update, delete
+  entityType String   // transaction, category, budget, asset
+  entityId   String
+  payload    String   // JSON string
+  status     String   @default("pending") // pending, synced, conflict, failed
+  syncedAt   DateTime?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([entityType, entityId])
+}

@@ -12,6 +12,9 @@
  * 5. Search: web_search
  * 6. Deploy: deploy_vercel
  * 7. Database: query_db
+ * 8. GitHub: git_log_detailed, git_push, git_create_branch, git_checkout,
+ *            git_branch_list, git_conflict_list, git_merge,
+ *            github_pr_create, github_pr_list
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -21,6 +24,35 @@ import * as fs from "fs/promises";
 import * as fsSync from "fs";
 import * as path from "path";
 import { execaCommand } from "execa";
+import { fileURLToPath } from "url";
+
+// ============================================================
+// LOAD .env from project root (two levels up: mcp-server/src → root)
+// Uses Node.js built-in — no dotenv dependency needed
+// ============================================================
+(function loadEnv() {
+    try {
+        const __dirname = path.dirname(fileURLToPath(import.meta.url));
+        // dist/index.js is 2 levels from root, src/index.ts is also 2 levels
+        const envPath = path.resolve(__dirname, "..", "..", "..", ".env");
+        if (!fsSync.existsSync(envPath)) return;
+        const lines = fsSync.readFileSync(envPath, "utf-8").split("\n");
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith("#")) continue;
+            const eqIdx = trimmed.indexOf("=");
+            if (eqIdx === -1) continue;
+            const key = trimmed.substring(0, eqIdx).trim();
+            const val = trimmed.substring(eqIdx + 1).trim().replace(/^"|"$/g, "");
+            if (key && !(key in process.env)) {
+                process.env[key] = val;
+            }
+        }
+        console.error(`[MCP] ✅ Loaded .env from: ${envPath}`);
+    } catch (e) {
+        console.error("[MCP] Could not load .env:", e);
+    }
+})()
 
 const server = new McpServer({
     name: "ai-dev-team-tools",
@@ -307,7 +339,7 @@ server.tool(
             }
 
             return {
-                content: [{ type: "text" as const, text: `✅ Tag created: ${version}${push ? " (pushed)" : ""}` }],
+                content: [{ type: "text" as const, text: `✅ Tag created: ${version}${push ? " (pushed to remote)" : ""}` }],
             };
         } catch (error: any) {
             return {
@@ -317,6 +349,368 @@ server.tool(
         }
     }
 );
+
+// ============================================================
+// 8. GITHUB AUTOMATION TOOLS
+// ============================================================
+
+server.tool(
+    "git_log_detailed",
+    "Get detailed git commit history with author, date, message, and file stats",
+    {
+        count: z.number().optional().describe("Number of commits (default: 20)"),
+        branch: z.string().optional().describe("Branch to read from (default: current)"),
+        since: z.string().optional().describe("Show commits since date, e.g. '2024-01-01'"),
+        cwd: z.string().optional(),
+    },
+    async ({ count = 20, branch, since, cwd }) => {
+        try {
+            const opts = { cwd: cwd ? path.resolve(cwd) : process.cwd(), shell: true };
+            const branchArg = branch ? branch : "";
+            const sinceArg = since ? `--since="${since}"` : "";
+            // Full format: hash | author | date | subject | files changed
+            const logCmd = `git log --pretty=format:"%H|%an|%ad|%s" --date=short --stat -n ${count} ${sinceArg} ${branchArg}`.trim();
+            const result = await execaCommand(logCmd, opts as any);
+
+            // Also get branch list and current branch
+            const branchResult = await execaCommand("git branch --show-current", opts as any);
+            const currentBranch = (branchResult.stdout ?? "").trim();
+
+            const output = [
+                `📋 Commit History (branch: ${currentBranch}, last ${count}):`,
+                "─".repeat(60),
+                result.stdout || "No commits found",
+            ].join("\n");
+
+            return { content: [{ type: "text" as const, text: output }] };
+        } catch (error: any) {
+            return { content: [{ type: "text" as const, text: `Git log error: ${error.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "git_push",
+    "Push local branch to remote GitHub repository",
+    {
+        remote: z.string().optional().describe("Remote name (default: origin)"),
+        branch: z.string().optional().describe("Branch to push (default: current branch)"),
+        force: z.boolean().optional().describe("Force push — use with caution (default: false)"),
+        setUpstream: z.boolean().optional().describe("Set upstream tracking branch (default: true for new branches)"),
+        tags: z.boolean().optional().describe("Also push all tags (default: false)"),
+        cwd: z.string().optional(),
+    },
+    async ({ remote = "origin", branch, force = false, setUpstream = false, tags = false, cwd }) => {
+        try {
+            const opts = { cwd: cwd ? path.resolve(cwd) : process.cwd(), shell: true, reject: false };
+
+            // Get current branch if not specified
+            let targetBranch = branch;
+            if (!targetBranch) {
+                const curBranch = await execaCommand("git branch --show-current", opts as any);
+                targetBranch = (curBranch.stdout ?? "").trim();
+            }
+
+            const forceFlag = force ? "--force-with-lease" : "";
+            const upstreamFlag = setUpstream ? `--set-upstream` : "";
+            const tagsFlag = tags ? "--follow-tags" : "";
+
+            const pushCmd = `git push ${remote} ${targetBranch} ${forceFlag} ${upstreamFlag} ${tagsFlag}`.replace(/\s+/g, " ").trim();
+            const result = await execaCommand(pushCmd, opts as any);
+
+            const success = result.exitCode === 0;
+            const output = [
+                success ? `✅ Pushed ${targetBranch} → ${remote}` : `❌ Push failed`,
+                result.stdout || "",
+                result.stderr || "",
+            ].filter(Boolean).join("\n");
+
+            return { content: [{ type: "text" as const, text: output }], isError: !success };
+        } catch (error: any) {
+            return { content: [{ type: "text" as const, text: `Git push error: ${error.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "git_create_branch",
+    "Create a new git branch, optionally from a specific base branch or commit",
+    {
+        name: z.string().describe("New branch name (e.g., 'feature/login', 'release/v1.2.0')"),
+        from: z.string().optional().describe("Base branch or commit to branch from (default: current HEAD)"),
+        checkout: z.boolean().optional().describe("Checkout the new branch immediately (default: true)"),
+        cwd: z.string().optional(),
+    },
+    async ({ name, from, checkout = true, cwd }) => {
+        try {
+            const opts = { cwd: cwd ? path.resolve(cwd) : process.cwd(), shell: true };
+            const fromArg = from ? from : "";
+            const createCmd = checkout
+                ? `git checkout -b ${name} ${fromArg}`.trim()
+                : `git branch ${name} ${fromArg}`.trim();
+            await execaCommand(createCmd, opts as any);
+
+            return {
+                content: [{ type: "text" as const, text: `✅ Branch created: ${name}${from ? ` (from ${from})` : ""}${checkout ? " — checked out" : ""}` }],
+            };
+        } catch (error: any) {
+            return { content: [{ type: "text" as const, text: `Git branch error: ${error.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "git_checkout",
+    "Switch to an existing branch or create and switch",
+    {
+        branch: z.string().describe("Branch name to checkout"),
+        create: z.boolean().optional().describe("Create branch if it doesn't exist (default: false)"),
+        cwd: z.string().optional(),
+    },
+    async ({ branch, create = false, cwd }) => {
+        try {
+            const opts = { cwd: cwd ? path.resolve(cwd) : process.cwd(), shell: true };
+            const cmd = create ? `git checkout -b ${branch}` : `git checkout ${branch}`;
+            await execaCommand(cmd, opts as any);
+            return { content: [{ type: "text" as const, text: `✅ Checked out: ${branch}` }] };
+        } catch (error: any) {
+            return { content: [{ type: "text" as const, text: `Git checkout error: ${error.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "git_branch_list",
+    "List all local and remote branches",
+    {
+        remote: z.boolean().optional().describe("Include remote branches (default: true)"),
+        cwd: z.string().optional(),
+    },
+    async ({ remote = true, cwd }) => {
+        try {
+            const opts = { cwd: cwd ? path.resolve(cwd) : process.cwd(), shell: true };
+            const cmd = remote ? "git branch -a --sort=-committerdate" : "git branch --sort=-committerdate";
+            const result = await execaCommand(cmd, opts as any);
+            const current = await execaCommand("git branch --show-current", opts as any);
+            return {
+                content: [{ type: "text" as const, text: `Current: ${(current.stdout ?? "").trim()}\n\nAll branches:\n${result.stdout ?? ""}` }],
+            };
+        } catch (error: any) {
+            return { content: [{ type: "text" as const, text: `Git branch list error: ${error.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "git_conflict_list",
+    "List all files with merge conflicts",
+    {
+        cwd: z.string().optional(),
+    },
+    async ({ cwd }) => {
+        try {
+            const opts = { cwd: cwd ? path.resolve(cwd) : process.cwd(), shell: true, reject: false };
+            const result = await execaCommand("git diff --name-only --diff-filter=U", opts as any);
+            const conflicted = (result.stdout ?? "").trim();
+            if (!conflicted) {
+                return { content: [{ type: "text" as const, text: "✅ No conflicts detected." }] };
+            }
+            const files = conflicted.split("\n");
+            return {
+                content: [{ type: "text" as const, text: `⚠️ ${files.length} file(s) with conflicts:\n${files.map((f: string) => `  • ${f}`).join("\n")}` }],
+            };
+        } catch (error: any) {
+            return { content: [{ type: "text" as const, text: `Conflict list error: ${error.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "git_merge",
+    "Merge a source branch into the current branch with automatic conflict resolution",
+    {
+        sourceBranch: z.string().describe("Branch to merge from (e.g., 'feature/login')"),
+        strategy: z.enum(["ours", "theirs", "manual"]).optional().describe(
+            "Conflict resolution: 'ours'=keep current branch, 'theirs'=accept incoming, 'manual'=leave conflicts for review (default: manual)"
+        ),
+        message: z.string().optional().describe("Custom merge commit message"),
+        noFastForward: z.boolean().optional().describe("Force a merge commit even if fast-forward is possible (default: true)"),
+        cwd: z.string().optional(),
+    },
+    async ({ sourceBranch, strategy = "manual", message, noFastForward = true, cwd }) => {
+        try {
+            const opts = { cwd: cwd ? path.resolve(cwd) : process.cwd(), shell: true, reject: false };
+            const msgArg = message ? `-m "${message}"` : `-m "Merge branch '${sourceBranch}'"`;
+            const ffArg = noFastForward ? "--no-ff" : "";
+
+            // Attempt merge
+            const mergeCmd = `git merge ${ffArg} ${msgArg} ${sourceBranch}`.replace(/\s+/g, " ").trim();
+            const mergeResult = await execaCommand(mergeCmd, opts as any);
+
+            if (mergeResult.exitCode === 0) {
+                return { content: [{ type: "text" as const, text: `✅ Merged '${sourceBranch}' successfully.\n${mergeResult.stdout}` }] };
+            }
+
+            // Conflicts detected — apply resolution strategy
+            if (strategy === "manual") {
+                const conflictList = await execaCommand("git diff --name-only --diff-filter=U", opts as any);
+                return {
+                    content: [{ type: "text" as const, text: `⚠️ Merge conflicts detected. Strategy: manual review required.\nConflicted files:\n${conflictList.stdout ?? ""}\n\nRun git_merge with strategy='ours' or 'theirs' to auto-resolve.` }],
+                    isError: true,
+                };
+            }
+
+            // Auto-resolve: checkout --ours or --theirs for each conflicted file
+            const conflictList2 = await execaCommand("git diff --name-only --diff-filter=U", opts as any);
+            const conflictedFiles = (conflictList2.stdout ?? "").trim().split("\n").filter(Boolean);
+
+            for (const file of conflictedFiles) {
+                const resolveCmd = strategy === "ours" ? `git checkout --ours "${file}"` : `git checkout --theirs "${file}"`;
+                await execaCommand(resolveCmd, opts as any);
+                await execaCommand(`git add "${file}"`, opts as any);
+            }
+
+            // Complete the merge
+            const completeResult = await execaCommand(
+                `git commit --no-edit -m "Merge '${sourceBranch}' — conflicts resolved with strategy: ${strategy}"`,
+                opts as any
+            );
+
+            const resolved = completeResult.exitCode === 0;
+            return {
+                content: [{
+                    type: "text" as const,
+                    text: resolved
+                        ? `✅ Merged '${sourceBranch}' with ${conflictedFiles.length} conflict(s) auto-resolved (strategy: ${strategy}).\nFiles resolved: ${conflictedFiles.join(", ")}`
+                        : `❌ Could not complete merge.\n${completeResult.stderr}`,
+                }],
+                isError: !resolved,
+            };
+        } catch (error: any) {
+            return { content: [{ type: "text" as const, text: `Git merge error: ${error.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "github_pr_create",
+    "Create a Pull Request on GitHub using the REST API (requires GITHUB_TOKEN env var)",
+    {
+        title: z.string().describe("PR title"),
+        body: z.string().optional().describe("PR description / changelog"),
+        base: z.string().describe("Base branch to merge into (e.g., 'main')"),
+        head: z.string().describe("Head branch with your changes (e.g., 'release/v1.2.0')"),
+        draft: z.boolean().optional().describe("Create as draft PR (default: false)"),
+        cwd: z.string().optional().describe("Repo directory to detect owner/repo from git remote"),
+    },
+    async ({ title, body = "", base, head, draft = false, cwd }) => {
+        try {
+            const token = process.env.GITHUB_TOKEN;
+            if (!token) {
+                return {
+                    content: [{ type: "text" as const, text: "❌ GITHUB_TOKEN environment variable not set. Add it to your .env file." }],
+                    isError: true,
+                };
+            }
+
+            // Parse owner/repo from git remote URL
+            const opts = { cwd: cwd ? path.resolve(cwd) : process.cwd(), shell: true };
+            const remoteResult = await execaCommand("git remote get-url origin", opts as any);
+            const remoteUrl = (remoteResult.stdout ?? "").trim();
+
+            // Support both HTTPS and SSH remote formats
+            const match = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)(\.git)?$/);
+            if (!match) {
+                return {
+                    content: [{ type: "text" as const, text: `❌ Could not parse GitHub owner/repo from remote URL: ${remoteUrl}` }],
+                    isError: true,
+                };
+            }
+            const [, owner, repo] = match;
+
+            const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/vnd.github+json",
+                    "Content-Type": "application/json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+                body: JSON.stringify({ title, body, base, head, draft }),
+            });
+
+            const data = await response.json() as any;
+            if (!response.ok) {
+                return {
+                    content: [{ type: "text" as const, text: `❌ GitHub API error ${response.status}: ${data.message || JSON.stringify(data)}` }],
+                    isError: true,
+                };
+            }
+
+            return {
+                content: [{
+                    type: "text" as const,
+                    text: `✅ Pull Request created!\n  #${data.number}: ${data.title}\n  URL: ${data.html_url}\n  ${draft ? "Status: Draft" : "Status: Open"}\n  ${base} ← ${head}`,
+                }],
+            };
+        } catch (error: any) {
+            return { content: [{ type: "text" as const, text: `GitHub PR error: ${error.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "github_pr_list",
+    "List open Pull Requests on GitHub (requires GITHUB_TOKEN env var)",
+    {
+        state: z.enum(["open", "closed", "all"]).optional().describe("PR state to filter (default: open)"),
+        limit: z.number().optional().describe("Max PRs to return (default: 10)"),
+        cwd: z.string().optional(),
+    },
+    async ({ state = "open", limit = 10, cwd }) => {
+        try {
+            const token = process.env.GITHUB_TOKEN;
+            if (!token) {
+                return { content: [{ type: "text" as const, text: "❌ GITHUB_TOKEN environment variable not set." }], isError: true };
+            }
+
+            const opts = { cwd: cwd ? path.resolve(cwd) : process.cwd(), shell: true };
+            const remoteResult = await execaCommand("git remote get-url origin", opts as any);
+            const match = (remoteResult.stdout ?? "").trim().match(/github\.com[:/]([^/]+)\/([^/.]+)(\.git)?$/);
+            if (!match) {
+                return { content: [{ type: "text" as const, text: "❌ Could not parse GitHub owner/repo from remote." }], isError: true };
+            }
+            const [, owner, repo] = match;
+
+            const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&per_page=${limit}`, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+            });
+
+            const prs = await response.json() as any[];
+            if (!response.ok || !Array.isArray(prs)) {
+                return { content: [{ type: "text" as const, text: `❌ GitHub API error: ${JSON.stringify(prs)}` }], isError: true };
+            }
+
+            if (prs.length === 0) {
+                return { content: [{ type: "text" as const, text: `No ${state} pull requests found.` }] };
+            }
+
+            const list = prs.map(pr =>
+                `  #${pr.number} [${pr.state}] ${pr.title}\n    ${pr.base.ref} ← ${pr.head.ref} | by ${pr.user.login}\n    ${pr.html_url}`
+            ).join("\n\n");
+
+            return { content: [{ type: "text" as const, text: `📋 Pull Requests (${state}):\n\n${list}` }] };
+        } catch (error: any) {
+            return { content: [{ type: "text" as const, text: `GitHub PR list error: ${error.message}` }], isError: true };
+        }
+    }
+);
+
+
 
 // ============================================================
 // 4. BROWSER AUTOMATION (Playwright)

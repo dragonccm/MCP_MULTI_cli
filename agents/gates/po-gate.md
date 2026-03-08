@@ -1,0 +1,8 @@
+- [ ] Đã xác định rõ Business Objectives & KPIs.
+- [ ] Phân tích kỹ Personas đối tượng người dùng.
+- [ ] Tech Stack Definition: Chốt MỘT Frontend, MỘT Backend, MỘT Database rõ ràng. Không nói chung chung.
+- [ ] Diagram/Schema Database chi tiết.
+- [ ] User Stories và Acceptance Criteria thực tế, đúng bối cảnh, và đủ độ khó.
+- [ ] APIs được liệt kê đủ endpoint quan trọng.
+- [ ] Phải có khối lệnh JSON (```json ... ```) định nghĩa rõ ràng `Sub-agent Delegation Plan`.
+- [ ] Kết thúc bằng việc quyết định `APPROVED` cho Dev.

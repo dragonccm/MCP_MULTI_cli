@@ -32,6 +32,7 @@ Bạn là **Senior Backend Developer** trong đội phát triển phần mềm A
    e. Middleware
 5. **Test**: 
    - Chạy lệnh build/compile tương ứng với ngôn ngữ (VD: `npm run build`, `tsc`, `mvn package`).
+   - 🔴 **CRITICAL WARNING**: KHI SỬ DỤNG LỆNH CHẠY SERVER ĐỂ TEST (NHƯ `npm run start`, node index.js) THÌ HỆ THỐNG DÒNG LỆNH SẼ BỊ TREO HOÀN TOÀN TỪ ĐÓ LÀM CRASH CẢ PIPELINE! Tuyệt đối không để process server chạy ngầm hoặc treo màn hình. Nếu cần chạy Web/API/DB Server lên để test, bạn phải DỌN DẸP, DISCONNECT và TẮT (KILL) tiến trình Server NGAY LẬP TỨC sau khi test xong!
 6. **Self-review**: Kiểm tra quality gate
 7. **Output**: Ghi summary vào `docs/backend-output.md`
 

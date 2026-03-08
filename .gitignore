@@ -39,3 +39,11 @@ yarn-error.log*
 # Database
 *.db
 *.sqlite
+
+
+# Ignore thư mục
+tmp-strix/
+tmp-paperclip/
+
+# Ignore file .env
+.env

@@ -5,7 +5,15 @@
   "scripts": {
     "build": "next build",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "setup": "node setup.js",
+    "migrate-rag": "node convert-rag.js",
+    "dev": "node orchestrator.js --dashboard",
+    "dashboard": "node orchestrator.js --daemon --dashboard",
+    "new": "node orchestrator.js --dashboard",
+    "flash": "node orchestrator.js --flash --dashboard",
+    "daemon": "node orchestrator.js --daemon --dashboard",
+    "build:mcp": "cd mcp-server && npm install && npm run build"
   },
   "prisma": {
     "seed": "npx tsx src/backend/prisma/seed.ts"
@@ -34,6 +42,8 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^4.11.0",
     "dotenv": "^17.3.1",
     "next": "^16.1.6",
     "next-auth": "^4.24.13",
