@@ -1,23 +1,29 @@
-import jwt, { JwtPayload } from "jsonwebtoken";
-import { env } from "../config/env";
+import jwt, { JwtPayload, SignOptions } from 'jsonwebtoken';
+import { env } from '../config/env';
 
-export interface TokenPayload extends JwtPayload {
+export interface TokenPayload {
   userId: string;
   email: string;
 }
 
-export function generateAccessToken(payload: { userId: string; email: string }): string {
-  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: 900 }); // 15 minutes
+export function generateAccessToken(payload: TokenPayload): string {
+  return jwt.sign(payload, env.JWT_SECRET as string, {
+    expiresIn: env.JWT_EXPIRES_IN,
+  } as SignOptions);
 }
 
-export function generateRefreshToken(payload: { userId: string; email: string }): string {
-  return jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: 604800 }); // 7 days
+export function generateRefreshToken(payload: TokenPayload): string {
+  return jwt.sign(payload, env.JWT_REFRESH_SECRET as string, {
+    expiresIn: env.JWT_REFRESH_EXPIRES_IN,
+  } as SignOptions);
 }
 
 export function verifyAccessToken(token: string): TokenPayload {
-  return jwt.verify(token, env.JWT_SECRET) as TokenPayload;
+  const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload & TokenPayload;
+  return { userId: decoded.userId, email: decoded.email };
 }
 
 export function verifyRefreshToken(token: string): TokenPayload {
-  return jwt.verify(token, env.JWT_REFRESH_SECRET) as TokenPayload;
+  const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET) as JwtPayload & TokenPayload;
+  return { userId: decoded.userId, email: decoded.email };
 }

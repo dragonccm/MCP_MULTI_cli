@@ -7,84 +7,83 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Link, router } from 'expo-router';
-import { Button, Input } from '../../src/components/ui';
-import { useAuthStore } from '../../src/stores';
+import { useRouter, Link } from 'expo-router';
+import { COLORS, SPACING, FONT_SIZE, BORDER, SHADOW } from '../../src/constants';
+import { BrutalButton, BrutalInput } from '../../src/components/ui';
 import { useForm } from '../../src/hooks';
-import { loginSchema, type LoginForm } from '../../src/utils';
-import { COLORS, SPACING, FONT_SIZE, FONT_WEIGHT, BORDER, SHADOW } from '../../src/theme';
+import { loginSchema, type LoginInput } from '../../src/utils';
+import { useAuthStore } from '../../src/stores';
 
 export default function LoginScreen() {
-  const { login, isLoading, error, clearError } = useAuthStore();
-  const form = useForm<LoginForm>(
-    { email: '', password: '' },
-    loginSchema
-  );
+  const router = useRouter();
+  const { login } = useAuthStore();
 
-  const handleLogin = async () => {
-    await form.handleSubmit(async (data) => {
-      clearError();
-      await login(data.email, data.password);
+  const form = useForm<typeof loginSchema>({
+    schema: loginSchema,
+    initialValues: { email: '', password: '' },
+    onSubmit: async (values: LoginInput) => {
+      await login(values.email, values.password);
       router.replace('/(tabs)');
-    });
-  };
+    },
+  });
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.logo}>WTF</Text>
-          <Text style={styles.logoSub}>NOTE</Text>
-          <Text style={styles.tagline}>Finance. Tracked. Simply.</Text>
+          <Text style={styles.logo}>💰</Text>
+          <Text style={styles.title}>WTF Note</Text>
+          <Text style={styles.subtitle}>Quản lý tài chính thông minh</Text>
         </View>
 
-        <View style={styles.form}>
-          <Text style={styles.formTitle}>LOG IN</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Đăng nhập</Text>
 
-          {error && (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
-          <Input
+          <BrutalInput
             label="Email"
-            placeholder="you@example.com"
+            placeholder="your@email.com"
             value={form.values.email}
             onChangeText={(v) => form.setValue('email', v)}
             error={form.errors.email}
             keyboardType="email-address"
             autoCapitalize="none"
-            autoCorrect={false}
+            autoComplete="email"
           />
 
-          <Input
-            label="Password"
-            placeholder="Min 8 characters"
+          <BrutalInput
+            label="Mật khẩu"
+            placeholder="Nhập mật khẩu"
             value={form.values.password}
             onChangeText={(v) => form.setValue('password', v)}
             error={form.errors.password}
             secureTextEntry
+            autoComplete="password"
           />
 
-          <Button
-            title={isLoading ? 'Logging in...' : 'Log In'}
-            onPress={handleLogin}
-            loading={isLoading}
+          {form.submitError && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>⚠️ {form.submitError}</Text>
+            </View>
+          )}
+
+          <BrutalButton
+            title="Đăng nhập"
+            onPress={form.handleSubmit}
+            loading={form.isSubmitting}
             fullWidth
             size="lg"
           />
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>No account? </Text>
+            <Text style={styles.footerText}>Chưa có tài khoản? </Text>
             <Link href="/(auth)/register" style={styles.link}>
-              <Text style={styles.linkText}>REGISTER →</Text>
+              Đăng ký ngay
             </Link>
           </View>
         </View>
@@ -98,76 +97,72 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  scroll: {
+  scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: SPACING.lg,
+    padding: SPACING.xl,
   },
   header: {
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.xxxl,
   },
   logo: {
     fontSize: 64,
-    fontWeight: '900',
-    color: COLORS.primary,
-    letterSpacing: 4,
-  },
-  logoSub: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.black,
-    color: COLORS.accent,
-    letterSpacing: 8,
-    marginTop: -8,
-  },
-  tagline: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    fontWeight: FONT_WEIGHT.medium,
-    marginTop: SPACING.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  form: {
-    backgroundColor: COLORS.surface,
-    borderWidth: BORDER.width,
-    borderColor: COLORS.border,
-    padding: SPACING.lg,
-    ...SHADOW.brutal,
-  },
-  formTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.black,
-    color: COLORS.text,
-    textTransform: 'uppercase',
-    marginBottom: SPACING.lg,
-    letterSpacing: 2,
-  },
-  errorBox: {
-    backgroundColor: COLORS.dangerLight,
-    borderWidth: BORDER.width,
-    borderColor: COLORS.danger,
-    padding: SPACING.sm,
     marginBottom: SPACING.md,
   },
+  title: {
+    fontSize: FONT_SIZE.display,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: -1,
+  },
+  subtitle: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+  },
+  card: {
+    backgroundColor: COLORS.surface,
+    borderWidth: BORDER.widthThick,
+    borderColor: COLORS.border,
+    borderRadius: BORDER.radiusLg,
+    padding: SPACING.xxl,
+    ...SHADOW.brutalLg,
+  },
+  cardTitle: {
+    fontSize: FONT_SIZE.xxl,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: SPACING.xl,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  errorBox: {
+    backgroundColor: COLORS.errorBg,
+    borderWidth: 1.5,
+    borderColor: COLORS.error,
+    borderRadius: BORDER.radius,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
   errorText: {
-    color: COLORS.danger,
+    color: COLORS.error,
     fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.bold,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: SPACING.lg,
+    marginTop: SPACING.xl,
   },
   footerText: {
-    fontSize: FONT_SIZE.sm,
+    fontSize: FONT_SIZE.md,
     color: COLORS.textSecondary,
   },
-  link: {},
-  linkText: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.accent,
-    fontWeight: FONT_WEIGHT.black,
+  link: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.primary,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });

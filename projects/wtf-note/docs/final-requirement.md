@@ -1,21 +1,25 @@
-I will read the instructions from the specified file to understand the tasks I need to execute.
-Cảm ơn bạn đã làm rõ các yêu cầu! Với những thông tin này, tôi đã có đủ cơ sở để chốt yêu cầu cho đội ngũ phát triển. Dưới đây là tóm tắt dự án cuối cùng:
+I will read the instructions from the specified file to begin the task.
+Cảm ơn bạn đã làm rõ các thông tin quan trọng! Tôi đã nắm được bức tranh tổng thể về ứng dụng quản lý tài chính cá nhân tích hợp AI của bạn. Dưới đây là tóm tắt yêu cầu cuối cùng để chuyển giao cho đội ngũ phát triển:
 
-# 🎯 FINAL REQUIREMENT: WTF-Note (Expense Management App)
+# 🎯 FINAL REQUIREMENT: WTF-NOTE (Expense & Investment Management)
 
 ## 1. Mục tiêu
-Xây dựng một ứng dụng di động quản lý tài chính cá nhân toàn diện và hiện đại. Ứng dụng không chỉ giúp theo dõi thu chi thông thường mà còn quản lý đa dạng các loại tài sản và nợ nần, kết hợp với sự hỗ trợ từ AI để tối ưu hóa việc quản lý tài chính.
+Xây dựng ứng dụng di động quản lý tài chính cá nhân dành cho đối tượng nhà đầu tư nhỏ lẻ. Ứng dụng không chỉ ghi chép thu chi thông thường mà còn hỗ trợ theo dõi nợ, các khoản phải thu/phải trả và danh mục đầu tư cơ bản với giao diện **Refined Light Brutalism** hiện đại.
 
 ## 2. Tính năng chính
-- **Quản lý Thu nhập/Chi tiêu & Nợ:** Tập trung vào trải nghiệm nhập liệu thủ công nhanh chóng và chính xác cho các khoản tiền mặt, thu nhập và đặc biệt là theo dõi nợ.
-- **Quản lý Danh mục tài sản:** Theo dõi các loại tài sản khác như Cổ phiếu, Tiền điện tử (Crypto) và Bất động sản.
-- **Dữ liệu tham khảo:** Tích hợp API công khai hoặc Web Search để cập nhật thông tin thị trường (giá cổ phiếu, crypto) giúp người dùng có cái nhìn tổng quan về giá trị tài sản hiện tại.
-- **AI Financial Advisor:** Sử dụng AI để phân tích dữ liệu người dùng nhập và đưa ra các lời khuyên hoặc báo cáo quản lý chi tiêu thông minh.
-- **Giao diện (UI/UX):** Thiết kế theo phong cách **Refined Light Brutalism** – mang lại cảm giác hiện đại, sắc nét, tối giản nhưng vẫn đầy cá tính và nghệ thuật.
+- **Quản lý giao dịch:** Ghi chép thu nhập, chi tiêu, các khoản nợ (debts/liabilities), khoản phải thu (receivables) và số dư tiền mặt/tài sản.
+- **Theo dõi tài sản & Thị trường:** Tích hợp các API (Marketstack, StockData, Marketaux, Currency APIs) để cập nhật giá trị danh mục đầu tư và tin tức tài chính định kỳ (không cần real-time tuyệt đối).
+- **Trợ lý AI (Gemini):** Đóng vai trò là một "tư vấn viên" chuyên nghiệp, phân tích dữ liệu chi tiêu/đầu tư để đưa ra lời khuyên về ngân sách, chiến lược tài chính và nhận định từ tin tức thị trường.
+- **Giao diện:** Phong cách **Refined Light Brutalism** (sử dụng Expo/React Native).
 
-## 3. Tech Stack Require
-- **Frontend:** React Native (đảm bảo hiệu năng mượt mà trên di động).
-- **Giao diện:** Tùy chỉnh theo phong cách Refined Light Brutalism (hiện tại chưa cần tích hợp sâu OpenClaw vào logic, chỉ tập trung vào phần hiển thị).
-- **Dữ liệu & AI:** Sử dụng Public APIs cho dữ liệu thị trường và tích hợp LLM cho tính năng tư vấn tài chính.
+## 3. Tech Stack Requirement
+- **Frontend:** React Native (Expo).
+- **Backend:** Node.js + Express.
+- **Database:** Neon PostgreSQL.
+- **AI Integration:** Google Gemini API.
+- **Data APIs:** Marketstack, StockData, Marketaux, Currency APIs.
+
+---
+Tôi sẽ chuyển các thông tin này cho Project Manager (PM) để bắt đầu phân tích chi tiết và lập kế hoạch thực hiện.
 
 [ACTION: PROCEED_TO_PM]

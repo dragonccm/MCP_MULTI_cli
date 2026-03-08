@@ -1,201 +1,132 @@
-export interface User {
-  id: string;
-  email: string;
-  profileName: string;
-  currencyPreference: string;
-  baseCurrency: string;
-  notificationSettings: NotificationSettings;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface NotificationSettings {
-  pushEnabled: boolean;
-  emailEnabled: boolean;
-  debtReminders: boolean;
-  budgetAlerts: boolean;
-}
+export type TransactionType = 'income' | 'expense' | 'debt' | 'receivable' | 'asset';
 
 export interface Transaction {
   id: string;
   userId: string;
   type: TransactionType;
   amount: number;
-  categoryId: string;
+  currency: string;
+  category: string;
+  description?: string;
   date: string;
-  note?: string;
-  synced: boolean;
+  creditorDebtor?: string;
+  isRecurring: boolean;
+  recurringInterval?: 'daily' | 'weekly' | 'monthly' | 'yearly';
   createdAt: string;
   updatedAt: string;
-}
-
-export type TransactionType = 'income' | 'expense';
-
-export interface Category {
-  id: string;
-  userId: string;
-  name: string;
-  icon?: string;
-  color?: string;
-  isDefault: boolean;
-  createdAt: string;
-}
-
-export interface Debt {
-  id: string;
-  userId: string;
-  contactName: string;
-  type: DebtType;
-  totalAmount: number;
-  remainingBalance: number;
-  dueDate: string;
-  isRecurring: boolean;
-  recurrenceInterval?: RecurrenceInterval;
-  status: DebtStatus;
-  createdAt: string;
-  paidDate?: string;
-}
-
-export type DebtType = 'owed' | 'owing';
-export type DebtStatus = 'pending' | 'overdue' | 'paid';
-export type RecurrenceInterval = 'monthly' | 'weekly';
-
-export interface DebtPayment {
-  id: string;
-  debtId: string;
-  amount: number;
-  paymentDate: string;
-  note?: string;
 }
 
 export interface Asset {
   id: string;
   userId: string;
-  type: AssetType;
+  symbol: string;
   name: string;
-  symbol?: string;
+  assetType: 'stock' | 'crypto' | 'fund' | 'bond' | 'other';
   quantity: number;
   purchasePrice: number;
+  currentPrice?: number;
   purchaseDate: string;
-  currentValue: number;
-  lastPriceUpdate?: string;
-  ownershipPercentage?: number;
-  linkedDebtId?: string;
-  address?: string;
-  propertyType?: string;
-  walletName?: string;
+  currency: string;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
-}
-
-export type AssetType = 'stock' | 'crypto' | 'real_estate';
-
-export interface Budget {
-  id: string;
-  userId: string;
-  categoryId: string;
-  categoryName?: string;
-  monthlyLimit: number;
-  currentMonthSpent: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AIInsight {
-  id: string;
-  userId: string;
-  type: InsightType;
-  title: string;
-  content: string;
-  estimatedSavings?: number;
-  generatedAt: string;
-  confidenceScore: number;
-  status: 'active' | 'archived';
-}
-
-export type InsightType = 'spending' | 'budget_recommendation' | 'net_worth_projection';
-
-export interface NetWorthProjection {
-  year: number;
-  optimistic: number;
-  base: number;
-  conservative: number;
 }
 
 export interface PortfolioSummary {
   totalValue: number;
-  totalInvested: number;
+  totalCost: number;
   totalGainLoss: number;
-  allocation: AllocationItem[];
+  gainLossPercentage: number;
+  assets: AssetWithValue[];
 }
 
-export interface AllocationItem {
-  type: AssetType;
-  label: string;
-  value: number;
-  percentage: number;
-  color: string;
+export interface AssetWithValue extends Asset {
+  currentValue: number;
+  gainLoss: number;
+  gainLossPercentage: number;
 }
 
-export interface DashboardOverview {
-  totalBalance: number;
-  monthlyIncome: number;
-  monthlyExpense: number;
-  netWorth: number;
-  recentTransactions: Transaction[];
-  spendingTrend: SpendingTrendItem[];
-}
-
-export interface SpendingTrendItem {
-  date: string;
-  amount: number;
-}
-
-export interface SpendingAnalytics {
-  byCategory: CategorySpending[];
-  byTime: TimeSpending[];
-  trendLine: SpendingTrendItem[];
-}
-
-export interface CategorySpending {
-  categoryId: string;
-  categoryName: string;
-  amount: number;
-  percentage: number;
-  color: string;
-}
-
-export interface TimeSpending {
-  period: string;
-  income: number;
-  expense: number;
-}
-
-export interface ApiResponse<T> {
-  data: T;
-  message?: string;
-  success: boolean;
-}
-
-export interface PaginatedResponse<T> extends ApiResponse<T[]> {
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
-export interface LoginRequest {
+export interface User {
+  id: string;
   email: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  profileName: string;
+  name: string;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AuthResponse {
-  user: User;
-  token: string;
+  accessToken: string;
   refreshToken: string;
+  user: User;
+}
+
+export interface Budget {
+  id: string;
+  userId: string;
+  category: string;
+  amount: number;
+  month: number;
+  year: number;
+  spent: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NewsArticle {
+  id: string;
+  title: string;
+  description: string;
+  source: string;
+  url: string;
+  imageUrl?: string;
+  publishedAt: string;
+  relevanceScore?: number;
+}
+
+export interface AIInsight {
+  id: string;
+  type: 'spending' | 'investment' | 'budget';
+  title: string;
+  summary: string;
+  details: string[];
+  recommendations: string[];
+  confidence: number;
+  createdAt: string;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message: string;
+  pagination?: PaginationInfo;
+}
+
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface TransactionFilter {
+  type?: TransactionType;
+  category?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  search?: string;
+}
+
+export type SyncStatus = 'synced' | 'pending' | 'error';
+
+export interface SyncQueueItem {
+  id: string;
+  action: 'create' | 'update' | 'delete';
+  entity: string;
+  data: Record<string, unknown>;
+  status: SyncStatus;
+  retryCount: number;
+  createdAt: string;
 }

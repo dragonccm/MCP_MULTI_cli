@@ -1,0 +1,6 @@
+- [ ] Code structure và architecture review hợp lý.
+- [ ] Bảo mật (Security) đảm bảo không có lỗ hổng cơ bản (SQLi, XSS, lộ API key).
+- [ ] Check performance cơ bản (không có N+1 query, không import thừa).
+- [ ] List các Critical Issues (nếu có) kèm hướng dẫn FIX cụ thể cho bộ phận Dev.
+- [ ] Report rõ ràng Passed/Failed.
+- [ ] Nếu tất cả OK, có tag `APPROVED`.

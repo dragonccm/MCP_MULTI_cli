@@ -1,24 +1,26 @@
-import app from "./app";
-import { env } from "./config/env";
-import { logger } from "./utils/logger";
-import { categoryService } from "./services/category.service";
+import app from './app';
+import { env } from './config/env';
+import logger from './utils/logger';
+import prisma from './config/database';
 
-async function bootstrap() {
+async function main() {
   try {
-    // Initialize default categories
-    await categoryService.initDefaults();
-    logger.info("Default categories initialized");
+    await prisma.$connect();
+    logger.info('Database connected');
 
     app.listen(env.PORT, () => {
-      logger.info(`WTF-Note API running on port ${env.PORT}`, {
-        env: env.NODE_ENV,
-        cors: env.CORS_ORIGIN,
-      });
+      logger.info(`Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
     });
   } catch (error) {
-    logger.error("Failed to start server", { error });
+    logger.error('Failed to start server', { error: (error as Error).message });
     process.exit(1);
   }
 }
 
-bootstrap();
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received, shutting down...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+main();

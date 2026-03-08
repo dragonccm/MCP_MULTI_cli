@@ -1,51 +1,48 @@
-import { prisma } from "../config/database";
+import prisma from '../config/database';
+import { Prisma } from '@prisma/client';
 
-export const budgetRepository = {
-  findByUser(userId: string, month?: number, year?: number) {
-    return prisma.budget.findMany({
-      where: {
-        userId,
-        deletedAt: null,
-        ...(month ? { month } : {}),
-        ...(year ? { year } : {}),
-      },
-      include: { category: { select: { id: true, name: true, icon: true, color: true } } },
-      orderBy: { category: { name: "asc" } },
-    });
-  },
-
-  findById(id: string, userId: string) {
+export class BudgetRepository {
+  async findById(id: string, userId: string) {
     return prisma.budget.findFirst({
       where: { id, userId, deletedAt: null },
       include: { category: true },
     });
-  },
+  }
 
-  findByCategoryAndPeriod(categoryId: string, month: number, year: number, userId: string) {
-    return prisma.budget.findFirst({
-      where: { categoryId, month, year, userId, deletedAt: null },
+  async findMany(userId: string, month?: number, year?: number) {
+    return prisma.budget.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        ...(month && { month }),
+        ...(year && { year }),
+      },
+      include: { category: true },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
     });
-  },
+  }
 
-  create(data: { categoryId: string; amount: number; month: number; year: number; userId: string }) {
+  async create(data: Prisma.BudgetCreateInput) {
     return prisma.budget.create({
       data,
       include: { category: true },
     });
-  },
+  }
 
-  update(id: string, data: { amount?: number }) {
+  async update(id: string, data: Prisma.BudgetUpdateInput) {
     return prisma.budget.update({
       where: { id },
-      data,
+      data: { ...data, updatedAt: new Date() },
       include: { category: true },
     });
-  },
+  }
 
-  softDelete(id: string) {
+  async softDelete(id: string) {
     return prisma.budget.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
-  },
-};
+  }
+}
+
+export const budgetRepository = new BudgetRepository();

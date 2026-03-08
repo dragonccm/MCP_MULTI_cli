@@ -1,25 +1,23 @@
 import { create } from 'zustand';
-import type { User, AuthResponse } from '../types';
+import type { User } from '../types';
 import { authService } from '../services/auth';
-import { setAuthToken } from '../services/api';
+import { saveToken, saveRefreshToken, clearAuth } from '../utils/storage';
 
 interface AuthState {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  setAuth: (response: AuthResponse) => void;
+  loadProfile: () => Promise<void>;
+  updateProfile: (updates: Partial<Pick<User, 'name' | 'currency'>>) => Promise<void>;
   clearError: () => void;
-  updateUser: (data: Partial<User>) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -27,70 +25,57 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await authService.login({ email, password });
-      setAuthToken(response.token);
-      set({
-        user: response.user,
-        token: response.token,
-        isAuthenticated: true,
-        isLoading: false,
-      });
+      const response = await authService.login(email, password);
+      await saveToken(response.accessToken);
+      await saveRefreshToken(response.refreshToken);
+      set({ user: response.user, isAuthenticated: true, isLoading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Login failed';
+      const message = err instanceof Error ? err.message : 'Đăng nhập thất bại';
       set({ error: message, isLoading: false });
+      throw err;
     }
   },
 
-  register: async (email, password, name) => {
+  register: async (name, email, password) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await authService.register({
-        email,
-        password,
-        profileName: name,
-      });
-      setAuthToken(response.token);
-      set({
-        user: response.user,
-        token: response.token,
-        isAuthenticated: true,
-        isLoading: false,
-      });
+      const response = await authService.register(name, email, password);
+      await saveToken(response.accessToken);
+      await saveRefreshToken(response.refreshToken);
+      set({ user: response.user, isAuthenticated: true, isLoading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Registration failed';
+      const message = err instanceof Error ? err.message : 'Đăng ký thất bại';
       set({ error: message, isLoading: false });
+      throw err;
     }
   },
 
   logout: async () => {
+    await clearAuth();
+    set({ user: null, isAuthenticated: false, error: null });
+  },
+
+  loadProfile: async () => {
+    set({ isLoading: true });
     try {
-      await authService.logout();
+      const user = await authService.getProfile();
+      set({ user, isAuthenticated: true, isLoading: false });
     } catch {
-      // Logout locally even if API fails
-    } finally {
-      setAuthToken(null);
-      set({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        error: null,
-      });
+      set({ isAuthenticated: false, isLoading: false });
     }
   },
 
-  setAuth: (response) => {
-    setAuthToken(response.token);
-    set({
-      user: response.user,
-      token: response.token,
-      isAuthenticated: true,
-    });
+  updateProfile: async (updates) => {
+    set({ isLoading: true, error: null });
+    try {
+      const user = await authService.updateProfile(updates);
+      set({ user, isLoading: false });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Cập nhật thất bại';
+      set({ error: message, isLoading: false });
+      throw err;
+    }
   },
 
   clearError: () => set({ error: null }),
-
-  updateUser: (data) =>
-    set((state) => ({
-      user: state.user ? { ...state.user, ...data } : null,
-    })),
 }));

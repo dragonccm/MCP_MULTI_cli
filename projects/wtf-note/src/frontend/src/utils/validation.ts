@@ -1,74 +1,60 @@
-import { z } from 'zod/v4';
+import { z } from 'zod';
 
 export const loginSchema = z.object({
-  email: z.email('Valid email required'),
-  password: z.string().min(8, 'Min 8 characters'),
+  email: z.string().email('Email không hợp lệ'),
+  password: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự'),
 });
 
 export const registerSchema = z.object({
-  profileName: z.string().min(2, 'Min 2 characters'),
-  email: z.email('Valid email required'),
-  password: z.string().min(8, 'Min 8 characters'),
-  confirmPassword: z.string().min(8, 'Min 8 characters'),
-}).check(
-  (ctx) => {
-    if (ctx.value.password !== ctx.value.confirmPassword) {
-      ctx.issues.push({
-        code: 'custom',
-        message: 'Passwords must match',
-        input: ctx.value.confirmPassword,
-        path: ['confirmPassword'],
-      });
-    }
-  }
-);
-
-export const transactionSchema = z.object({
-  type: z.enum(['income', 'expense']),
-  amount: z.number().positive('Amount must be positive'),
-  categoryId: z.string().min(1, 'Category required'),
-  date: z.string().min(1, 'Date required'),
-  note: z.string().optional(),
+  name: z.string().min(2, 'Tên tối thiểu 2 ký tự').max(50, 'Tên tối đa 50 ký tự'),
+  email: z.string().email('Email không hợp lệ'),
+  password: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Mật khẩu không khớp',
+  path: ['confirmPassword'],
 });
 
-export const debtSchema = z.object({
-  contactName: z.string().min(1, 'Name required'),
-  type: z.enum(['owed', 'owing']),
-  totalAmount: z.number().positive('Amount must be positive'),
-  remainingBalance: z.number().min(0),
-  dueDate: z.string().min(1, 'Due date required'),
-  isRecurring: z.boolean(),
-  recurrenceInterval: z.enum(['monthly', 'weekly']).optional(),
+export const transactionSchema = z.object({
+  type: z.enum(['income', 'expense', 'debt', 'receivable', 'asset']),
+  amount: z.number().positive('Số tiền phải lớn hơn 0'),
+  category: z.string().min(1, 'Vui lòng chọn danh mục'),
+  description: z.string().optional(),
+  date: z.string().min(1, 'Vui lòng chọn ngày'),
+  creditorDebtor: z.string().optional(),
+  currency: z.string().default('VND'),
+  isRecurring: z.boolean().default(false),
+  recurringInterval: z.enum(['daily', 'weekly', 'monthly', 'yearly']).optional(),
 });
 
 export const assetSchema = z.object({
-  type: z.enum(['stock', 'crypto', 'real_estate']),
-  name: z.string().min(1, 'Name required'),
-  symbol: z.string().optional(),
-  quantity: z.number().positive('Quantity required'),
-  purchasePrice: z.number().min(0, 'Price required'),
-  purchaseDate: z.string().min(1, 'Date required'),
-  address: z.string().optional(),
-  propertyType: z.string().optional(),
-  walletName: z.string().optional(),
-  ownershipPercentage: z.number().min(0).max(100).optional(),
+  symbol: z.string().min(1, 'Vui lòng nhập mã chứng khoán').max(10),
+  name: z.string().min(1, 'Vui lòng nhập tên tài sản'),
+  assetType: z.enum(['stock', 'crypto', 'fund', 'bond', 'other']),
+  quantity: z.number().positive('Số lượng phải lớn hơn 0'),
+  purchasePrice: z.number().positive('Giá mua phải lớn hơn 0'),
+  purchaseDate: z.string().min(1, 'Vui lòng chọn ngày mua'),
+  currency: z.string().default('VND'),
+  notes: z.string().optional(),
 });
 
-export const budgetSchema = z.object({
-  categoryId: z.string().min(1, 'Category required'),
-  monthlyLimit: z.number().positive('Limit must be positive'),
+export const profileSchema = z.object({
+  name: z.string().min(2, 'Tên tối thiểu 2 ký tự').max(50),
+  currency: z.string().min(3).max(3),
 });
 
-export const categorySchema = z.object({
-  name: z.string().min(1, 'Name required').max(30, 'Max 30 characters'),
-  icon: z.string().optional(),
-  color: z.string().optional(),
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự'),
+  newPassword: z.string().min(8, 'Mật khẩu mới tối thiểu 8 ký tự'),
+  confirmNewPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmNewPassword, {
+  message: 'Mật khẩu mới không khớp',
+  path: ['confirmNewPassword'],
 });
 
-export type LoginForm = z.infer<typeof loginSchema>;
-export type RegisterForm = z.infer<typeof registerSchema>;
-export type TransactionForm = z.infer<typeof transactionSchema>;
-export type DebtForm = z.infer<typeof debtSchema>;
-export type AssetForm = z.infer<typeof assetSchema>;
-export type BudgetForm = z.infer<typeof budgetSchema>;
-export type CategoryForm = z.infer<typeof categorySchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type TransactionInput = z.infer<typeof transactionSchema>;
+export type AssetInput = z.infer<typeof assetSchema>;
+export type ProfileInput = z.infer<typeof profileSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

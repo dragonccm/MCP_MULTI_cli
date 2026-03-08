@@ -1,62 +1,55 @@
-import { prisma } from "../config/database";
+import prisma from '../config/database';
+import { Prisma } from '@prisma/client';
 
-export const assetRepository = {
-  findByUser(userId: string, type?: string) {
-    return prisma.asset.findMany({
-      where: {
-        userId,
-        deletedAt: null,
-        ...(type ? { type } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-    });
-  },
-
-  findById(id: string, userId: string) {
+export class AssetRepository {
+  async findById(id: string) {
     return prisma.asset.findFirst({
-      where: { id, userId, deletedAt: null },
+      where: { id, deletedAt: null },
+      include: { portfolio: true },
     });
-  },
+  }
 
-  create(data: Record<string, unknown> & { type: string; userId: string }) {
-    return prisma.asset.create({ data: data as never });
-  },
+  async findByPortfolio(portfolioId: string) {
+    return prisma.asset.findMany({
+      where: { portfolioId, deletedAt: null },
+      orderBy: { symbol: 'asc' },
+    });
+  }
 
-  update(id: string, data: Record<string, unknown>) {
-    return prisma.asset.update({ where: { id }, data: data as never });
-  },
+  async findBySymbol(portfolioId: string, symbol: string) {
+    return prisma.asset.findFirst({
+      where: { portfolioId, symbol, deletedAt: null },
+    });
+  }
 
-  softDelete(id: string) {
+  async create(data: Prisma.AssetCreateInput) {
+    return prisma.asset.create({
+      data,
+      include: { portfolio: true },
+    });
+  }
+
+  async update(id: string, data: Prisma.AssetUpdateInput) {
+    return prisma.asset.update({
+      where: { id },
+      data: { ...data, updatedAt: new Date() },
+      include: { portfolio: true },
+    });
+  }
+
+  async softDelete(id: string) {
     return prisma.asset.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
-  },
+  }
 
-  getPortfolioSummary(userId: string) {
-    return prisma.asset.findMany({
-      where: { userId, deletedAt: null },
-      select: {
-        id: true,
-        type: true,
-        ticker: true,
-        stockQuantity: true,
-        purchasePrice: true,
-        coinSymbol: true,
-        cryptoQuantity: true,
-        avgBuyPrice: true,
-        propertyName: true,
-        realEstatePurchasePrice: true,
-        estimatedValue: true,
-        ownershipPercentage: true,
-      },
+  async updatePrice(id: string, currentPrice: number) {
+    return prisma.asset.update({
+      where: { id },
+      data: { currentPrice, lastUpdated: new Date() },
     });
-  },
+  }
+}
 
-  getAllForExport(userId: string) {
-    return prisma.asset.findMany({
-      where: { userId, deletedAt: null },
-      orderBy: { type: "asc" },
-    });
-  },
-};
+export const assetRepository = new AssetRepository();

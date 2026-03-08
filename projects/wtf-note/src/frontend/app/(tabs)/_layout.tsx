@@ -1,11 +1,11 @@
-import { Tabs } from 'expo-router';
 import React from 'react';
+import { Tabs } from 'expo-router';
 import { Text, StyleSheet } from 'react-native';
-import { COLORS, FONT_WEIGHT } from '../../src/theme';
+import { COLORS, FONT_SIZE } from '../../src/constants';
 
-function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
+function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return (
-    <Text style={[styles.icon, focused && styles.iconFocused]}>{icon}</Text>
+    <Text style={[styles.icon, focused && styles.iconFocused]}>{emoji}</Text>
   );
 }
 
@@ -13,66 +13,67 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: COLORS.background },
-        headerTintColor: COLORS.text,
+        headerStyle: {
+          backgroundColor: COLORS.background,
+          borderBottomWidth: 2,
+          borderBottomColor: COLORS.border,
+        },
         headerTitleStyle: {
-          fontWeight: '900',
-          textTransform: 'uppercase',
-          fontSize: 16,
-          letterSpacing: 0.5,
+          fontWeight: '800',
+          color: COLORS.text,
+          fontSize: FONT_SIZE.xl,
         },
         headerShadowVisible: false,
         tabBarStyle: {
           backgroundColor: COLORS.surface,
           borderTopWidth: 2,
           borderTopColor: COLORS.border,
-          height: 60,
-          paddingBottom: 8,
           paddingTop: 4,
+          paddingBottom: 4,
+          height: 60,
         },
-        tabBarActiveTintColor: COLORS.accent,
-        tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textLight,
         tabBarLabelStyle: {
           fontWeight: '700',
-          fontSize: 10,
+          fontSize: FONT_SIZE.xs,
           textTransform: 'uppercase',
-          letterSpacing: 0.5,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ focused }) => <TabIcon icon="📊" focused={focused} />,
+          title: 'Tổng quan',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="transactions"
         options={{
-          title: 'Transactions',
-          tabBarIcon: ({ focused }) => <TabIcon icon="💰" focused={focused} />,
+          title: 'Giao dịch',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="💳" focused={focused} />,
         }}
       />
       <Tabs.Screen
-        name="debts"
+        name="portfolio"
         options={{
-          title: 'Debts',
-          tabBarIcon: ({ focused }) => <TabIcon icon="📋" focused={focused} />,
+          title: 'Danh mục',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📊" focused={focused} />,
         }}
       />
       <Tabs.Screen
-        name="assets"
+        name="advisor"
         options={{
-          title: 'Assets',
-          tabBarIcon: ({ focused }) => <TabIcon icon="📈" focused={focused} />,
+          title: 'AI Advisor',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🤖" focused={focused} />,
         }}
       />
       <Tabs.Screen
-        name="more"
+        name="profile"
         options={{
-          title: 'More',
-          tabBarIcon: ({ focused }) => <TabIcon icon="⚙️" focused={focused} />,
+          title: 'Cá nhân',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
         }}
       />
     </Tabs>
@@ -81,9 +82,11 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   icon: {
-    fontSize: 20,
+    fontSize: 22,
+    opacity: 0.6,
   },
   iconFocused: {
-    fontSize: 22,
+    opacity: 1,
+    transform: [{ scale: 1.15 }],
   },
 });

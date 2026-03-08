@@ -1,173 +1,151 @@
 import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  TouchableOpacity,
-} from 'react-native';
-import { router } from 'expo-router';
-import { Card, Skeleton, EmptyState } from '../../src/components/ui';
-import { useAppStore, useAuthStore } from '../../src/stores';
-import { formatCurrency, formatNumber, formatDate } from '../../src/utils';
-import {
-  COLORS,
-  SPACING,
-  FONT_SIZE,
-  FONT_WEIGHT,
-  BORDER,
-  SHADOW,
-} from '../../src/theme';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { useRouter } from 'expo-router';
+import { COLORS, SPACING, FONT_SIZE, CATEGORY_ICONS } from '../../src/constants';
+import { BrutalCard, BrutalButton, LoadingState, ErrorState } from '../../src/components/ui';
+import { useAuthStore, useTransactionStore } from '../../src/stores';
+import { formatCurrency } from '../../src/utils';
 
 export default function DashboardScreen() {
-  const user = useAuthStore((s) => s.user);
-  const { dashboard, dashboardLoading, fetchDashboard } = useAppStore();
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const { summary, isLoading, error, fetchSummary, fetchTransactions, transactions } = useTransactionStore();
   const [refreshing, setRefreshing] = React.useState(false);
 
   useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
+    const now = new Date();
+    fetchSummary(now.getMonth() + 1, now.getFullYear());
+    fetchTransactions();
+  }, [fetchSummary, fetchTransactions]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchDashboard();
+    const now = new Date();
+    await Promise.all([
+      fetchSummary(now.getMonth() + 1, now.getFullYear()),
+      fetchTransactions(),
+    ]);
     setRefreshing(false);
   };
 
-  const currency = user?.currencyPreference ?? 'VND';
+  if (isLoading && !summary) {
+    return <LoadingState fullScreen />;
+  }
+
+  if (error && !summary) {
+    return <ErrorState message={error} onRetry={onRefresh} />;
+  }
+
+  const currency = user?.currency ?? 'VND';
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
     >
       <View style={styles.greeting}>
-        <Text style={styles.greetingText}>
-          Hello, {user?.profileName ?? 'User'} 👋
-        </Text>
-        <Text style={styles.dateText}>
-          {new Date().toLocaleDateString('vi-VN', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-          })}
+        <Text style={styles.greetingText}>Xin chào, {user?.name ?? 'bạn'} 👋</Text>
+        <Text style={styles.greetingSubtext}>
+          {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
         </Text>
       </View>
 
-      {dashboardLoading && !dashboard ? (
-        <View>
-          <Skeleton height={120} />
-          <Skeleton height={80} />
-          <Skeleton height={80} />
-        </View>
-      ) : (
-        <>
-          <Card style={styles.balanceCard}>
-            <Text style={styles.balanceLabel}>TOTAL BALANCE</Text>
-            <Text style={styles.balanceAmount}>
-              {formatCurrency(dashboard?.totalBalance ?? 0, currency)}
+      {/* Balance Card */}
+      <BrutalCard style={styles.balanceCard} variant="accent">
+        <Text style={styles.balanceLabel}>SỐ DƯ THÁNG NÀY</Text>
+        <Text style={styles.balanceAmount}>
+          {formatCurrency(summary?.balance ?? 0, currency)}
+        </Text>
+        <View style={styles.balanceRow}>
+          <View style={styles.balanceItem}>
+            <Text style={styles.balanceItemLabel}>Thu nhập</Text>
+            <Text style={[styles.balanceItemValue, { color: COLORS.success }]}>
+              +{formatCurrency(summary?.totalIncome ?? 0, currency)}
             </Text>
-            <View style={styles.balanceRow}>
-              <View style={styles.balanceStat}>
-                <Text style={styles.statLabel}>NET WORTH</Text>
-                <Text style={styles.statValue}>
-                  {formatCurrency(dashboard?.netWorth ?? 0, currency)}
+          </View>
+          <View style={styles.balanceDivider} />
+          <View style={styles.balanceItem}>
+            <Text style={styles.balanceItemLabel}>Chi tiêu</Text>
+            <Text style={[styles.balanceItemValue, { color: COLORS.error }]}>
+              -{formatCurrency(summary?.totalExpense ?? 0, currency)}
+            </Text>
+          </View>
+        </View>
+      </BrutalCard>
+
+      {/* Quick Actions */}
+      <View style={styles.quickActions}>
+        <BrutalButton
+          title="+ Giao dịch"
+          onPress={() => router.push('/transaction/create')}
+          variant="primary"
+          size="md"
+        />
+        <BrutalButton
+          title="+ Tài sản"
+          onPress={() => router.push('/asset/create')}
+          variant="secondary"
+          size="md"
+        />
+      </View>
+
+      {/* Spending by Category */}
+      {summary?.byCategory && Object.keys(summary.byCategory).length > 0 && (
+        <BrutalCard title="Chi tiêu theo danh mục" style={styles.section}>
+          {Object.entries(summary.byCategory)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+            .map(([category, amount]) => (
+              <View key={category} style={styles.categoryRow}>
+                <Text style={styles.categoryIcon}>{CATEGORY_ICONS[category] ?? '📌'}</Text>
+                <Text style={styles.categoryName}>{category}</Text>
+                <Text style={styles.categoryAmount}>
+                  {formatCurrency(amount, currency)}
                 </Text>
               </View>
-            </View>
-          </Card>
-
-          <View style={styles.statsRow}>
-            <Card style={styles.statCard} variant="success">
-              <Text style={styles.statIcon}>📈</Text>
-              <Text style={styles.miniLabel}>INCOME</Text>
-              <Text style={[styles.statAmount, { color: COLORS.income }]}>
-                +{formatNumber(dashboard?.monthlyIncome ?? 0)}
-              </Text>
-            </Card>
-            <Card style={styles.statCard} variant="danger">
-              <Text style={styles.statIcon}>📉</Text>
-              <Text style={styles.miniLabel}>EXPENSE</Text>
-              <Text style={[styles.statAmount, { color: COLORS.expense }]}>
-                -{formatNumber(dashboard?.monthlyExpense ?? 0)}
-              </Text>
-            </Card>
-          </View>
-
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>RECENT</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/transactions')}>
-              <Text style={styles.seeAll}>SEE ALL →</Text>
-            </TouchableOpacity>
-          </View>
-
-          {(!dashboard?.recentTransactions ||
-            dashboard.recentTransactions.length === 0) ? (
-            <EmptyState
-              title="No transactions yet"
-              subtitle="Start tracking your finances"
-              actionLabel="Add Transaction"
-              onAction={() => router.push('/transactions/add')}
-            />
-          ) : (
-            dashboard.recentTransactions.slice(0, 5).map((tx) => (
-              <View key={tx.id} style={styles.txItem}>
-                <View style={styles.txLeft}>
-                  <Text style={styles.txNote}>{tx.note ?? 'Transaction'}</Text>
-                  <Text style={styles.txDate}>{formatDate(tx.date)}</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.txAmount,
-                    { color: tx.type === 'income' ? COLORS.income : COLORS.expense },
-                  ]}
-                >
-                  {tx.type === 'income' ? '+' : '-'}
-                  {formatCurrency(tx.amount, currency)}
-                </Text>
-              </View>
-            ))
-          )}
-
-          <View style={styles.quickActions}>
-            <Text style={styles.sectionTitle}>QUICK ACTIONS</Text>
-            <View style={styles.actionsRow}>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: COLORS.income }]}
-                onPress={() => router.push('/transactions/add')}
-              >
-                <Text style={styles.actionIcon}>➕</Text>
-                <Text style={styles.actionLabel}>Transaction</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: COLORS.accent }]}
-                onPress={() => router.push('/debts/add')}
-              >
-                <Text style={styles.actionIcon}>📋</Text>
-                <Text style={styles.actionLabel}>Debt</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: COLORS.info }]}
-                onPress={() => router.push('/assets/add')}
-              >
-                <Text style={styles.actionIcon}>📈</Text>
-                <Text style={styles.actionLabel}>Asset</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: COLORS.warning }]}
-                onPress={() => router.push('/ai/insights')}
-              >
-                <Text style={styles.actionIcon}>🤖</Text>
-                <Text style={styles.actionLabel}>AI Advisor</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </>
+            ))}
+        </BrutalCard>
       )}
+
+      {/* Recent Transactions */}
+      <BrutalCard title="Giao dịch gần đây" style={styles.section}>
+        {transactions.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>📭</Text>
+            <Text style={styles.emptyText}>Chưa có giao dịch nào</Text>
+            <BrutalButton
+              title="Thêm giao dịch đầu tiên"
+              onPress={() => router.push('/transaction/create')}
+              variant="outline"
+              size="sm"
+            />
+          </View>
+        ) : (
+          transactions.slice(0, 5).map((tx) => (
+            <View key={tx.id} style={styles.recentTx}>
+              <Text style={styles.txIcon}>{CATEGORY_ICONS[tx.category] ?? '📌'}</Text>
+              <View style={styles.txInfo}>
+                <Text style={styles.txDesc} numberOfLines={1}>
+                  {tx.description || tx.category}
+                </Text>
+                <Text style={styles.txDate}>
+                  {new Date(tx.date).toLocaleDateString('vi-VN')}
+                </Text>
+              </View>
+              <Text
+                style={[
+                  styles.txAmount,
+                  { color: tx.type === 'income' || tx.type === 'receivable' ? COLORS.success : COLORS.error },
+                ]}
+              >
+                {tx.type === 'income' || tx.type === 'receivable' ? '+' : '-'}
+                {formatCurrency(Math.abs(tx.amount), tx.currency)}
+              </Text>
+            </View>
+          ))
+        )}
+      </BrutalCard>
     </ScrollView>
   );
 }
@@ -178,159 +156,136 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   content: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.xxl,
+    padding: SPACING.lg,
+    paddingBottom: SPACING.xxxl,
   },
   greeting: {
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.xl,
   },
   greetingText: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: FONT_WEIGHT.black,
+    fontWeight: '800',
     color: COLORS.text,
   },
-  dateText: {
-    fontSize: FONT_SIZE.sm,
+  greetingSubtext: {
+    fontSize: FONT_SIZE.md,
     color: COLORS.textSecondary,
-    fontWeight: FONT_WEIGHT.medium,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   balanceCard: {
-    backgroundColor: COLORS.primary,
-    padding: SPACING.lg,
+    marginBottom: SPACING.xl,
   },
   balanceLabel: {
     fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  balanceAmount: {
-    fontSize: FONT_SIZE.xxxl,
-    fontWeight: FONT_WEIGHT.black,
-    color: COLORS.textInverse,
-    marginTop: SPACING.xs,
-  },
-  balanceRow: {
-    flexDirection: 'row',
-    marginTop: SPACING.md,
-  },
-  balanceStat: {
-    flex: 1,
-  },
-  statLabel: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  statValue: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.textInverse,
-    marginTop: 2,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-  },
-  statCard: {
-    flex: 1,
-    alignItems: 'center',
-    padding: SPACING.md,
-  },
-  statIcon: {
-    fontSize: 24,
-    marginBottom: SPACING.xs,
-  },
-  miniLabel: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.black,
+    fontWeight: '700',
     color: COLORS.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  statAmount: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.black,
-    marginTop: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.sm,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.black,
+  balanceAmount: {
+    fontSize: FONT_SIZE.display,
+    fontWeight: '900',
     color: COLORS.text,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    marginVertical: SPACING.sm,
   },
-  seeAll: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.accent,
-  },
-  txItem: {
+  balanceRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderWidth: BORDER.width,
-    borderColor: COLORS.border,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
+    marginTop: SPACING.md,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
   },
-  txLeft: {
+  balanceItem: {
     flex: 1,
   },
-  txNote: {
+  balanceDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: COLORS.borderLight,
+    marginHorizontal: SPACING.md,
+  },
+  balanceItemLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textLight,
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  balanceItemValue: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginBottom: SPACING.xl,
+  },
+  section: {
+    marginBottom: SPACING.xl,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceAlt,
+  },
+  categoryIcon: {
+    fontSize: 20,
+    marginRight: SPACING.md,
+  },
+  categoryName: {
+    flex: 1,
     fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  categoryAmount: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '700',
+    color: COLORS.error,
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: SPACING.xl,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: SPACING.sm,
+  },
+  emptyText: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.lg,
+  },
+  recentTx: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceAlt,
+  },
+  txIcon: {
+    fontSize: 20,
+    marginRight: SPACING.md,
+  },
+  txInfo: {
+    flex: 1,
+  },
+  txDesc: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '600',
     color: COLORS.text,
   },
   txDate: {
     fontSize: FONT_SIZE.xs,
-    color: COLORS.textMuted,
+    color: COLORS.textLight,
     marginTop: 2,
   },
   txAmount: {
     fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.black,
-  },
-  quickActions: {
-    marginTop: SPACING.lg,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginTop: SPACING.sm,
-  },
-  actionBtn: {
-    flex: 1,
-    minWidth: '45%',
-    alignItems: 'center',
-    padding: SPACING.md,
-    borderWidth: BORDER.width,
-    borderColor: COLORS.border,
-    ...SHADOW.brutalSm,
-  },
-  actionIcon: {
-    fontSize: 24,
-    marginBottom: SPACING.xs,
-  },
-  actionLabel: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.black,
-    color: COLORS.textInverse,
-    textTransform: 'uppercase',
+    fontWeight: '800',
   },
 });

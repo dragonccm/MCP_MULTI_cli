@@ -1,14 +1,15 @@
-import { Router } from "express";
-import { aiController } from "../controllers/ai.controller";
-import { authenticate } from "../middleware/auth";
+import { Router } from 'express';
+import { aiController } from '../controllers/ai.controller';
+import { authMiddleware } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { spendingInsightsSchema, investmentAdviceSchema, budgetPlanningSchema } from '../validators/ai.validator';
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authMiddleware);
 
-router.get("/spending-insights", aiController.getSpendingInsights);
-router.get("/budget-recommendations", aiController.getBudgetRecommendations);
-router.get("/net-worth-projection", aiController.getNetWorthProjection);
-router.get("/history", aiController.getInsightHistory);
+router.post('/spending-insights', validate(spendingInsightsSchema), (req, res, next) => aiController.getSpendingInsights(req, res, next));
+router.post('/investment-advice', validate(investmentAdviceSchema), (req, res, next) => aiController.getInvestmentAdvice(req, res, next));
+router.post('/budget-planning', validate(budgetPlanningSchema), (req, res, next) => aiController.getBudgetPlanning(req, res, next));
 
 export default router;

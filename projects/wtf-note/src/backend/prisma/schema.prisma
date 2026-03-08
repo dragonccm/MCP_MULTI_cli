@@ -8,209 +8,158 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
+  id           String   @id @default(uuid())
+  email        String   @unique
   password     String
   name         String
-  currency     String    @default("VND")
-  locale       String    @default("vi-VN")
-  failedLogins Int       @default(0)
-  lockedUntil  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  currency     String   @default("VND")
+  isVerified   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   deletedAt    DateTime?
 
-  transactions  Transaction[]
-  categories    Category[]
-  debts         Debt[]
-  assets        Asset[]
-  budgets       Budget[]
-  aiInsights    AiInsight[]
-  refreshTokens RefreshToken[]
+  transactions Transaction[]
+  categories   Category[]
+  budgets      Budget[]
+  portfolios   Portfolio[]
+  syncLogs     SyncLog[]
 
   @@index([email])
-  @@map("users")
-}
-
-model RefreshToken {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  userId    String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([token])
-  @@index([userId])
-  @@map("refresh_tokens")
-}
-
-model Category {
-  id        String    @id @default(cuid())
-  name      String
-  type      String    // "income" | "expense"
-  icon      String    @default("📦")
-  color     String    @default("#333333")
-  isDefault Boolean   @default(false)
-  userId    String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-  budgets      Budget[]
-
-  @@unique([name, userId, type])
-  @@index([userId])
-  @@index([type])
-  @@map("categories")
+  @@index([deletedAt])
 }
 
 model Transaction {
-  id         String    @id @default(cuid())
-  amount     Float
-  type       String    // "income" | "expense"
-  categoryId String
-  date       DateTime
-  note       String?
-  userId     String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
+  id          String   @id @default(uuid())
+  userId      String
+  categoryId  String?
+  type        String   // income, expense, debt, receivable, asset
+  amount      Float
+  currency    String   @default("VND")
+  description String?
+  date        DateTime
+  note        String?
+  status      String   @default("completed") // completed, pending, cancelled
+  metadata    String?  // JSON string for extra data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id])
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([categoryId])
+  @@index([type])
   @@index([date])
-  @@index([type])
-  @@map("transactions")
+  @@index([deletedAt])
 }
 
-model Debt {
-  id                String    @id @default(cuid())
-  creditorDebtor    String
-  amount            Float
-  remainingBalance  Float
-  type              String    // "owed" | "owing"
-  dueDate           DateTime?
-  status            String    @default("active") // "active" | "paid" | "overdue"
-  isRecurring       Boolean   @default(false)
-  recurringSchedule String?   // "weekly" | "monthly"
-  note              String?
-  userId            String
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  deletedAt         DateTime?
-
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payments DebtPayment[]
-
-  @@index([userId])
-  @@index([status])
-  @@index([type])
-  @@index([dueDate])
-  @@map("debts")
-}
-
-model DebtPayment {
-  id        String   @id @default(cuid())
-  debtId    String
-  amount    Float
-  date      DateTime
-  note      String?
-  createdAt DateTime @default(now())
-
-  debt Debt @relation(fields: [debtId], references: [id], onDelete: Cascade)
-
-  @@index([debtId])
-  @@map("debt_payments")
-}
-
-model Asset {
-  id        String    @id @default(cuid())
-  type      String    // "stock" | "crypto" | "real_estate"
+model Category {
+  id        String   @id @default(uuid())
   userId    String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  name      String
+  type      String   // income, expense
+  icon      String?
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   deletedAt DateTime?
 
-  // Stock fields
-  ticker        String?
-  stockQuantity Float?
-  purchasePrice Float?
-  purchaseDate  DateTime?
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
 
-  // Crypto fields
-  coinSymbol     String?
-  cryptoQuantity Float?
-  avgBuyPrice    Float?
-  walletExchange String?
-
-  // Real estate fields
-  propertyName        String?
-  address             String?
-  realEstatePurchasePrice Float?
-  estimatedValue      Float?
-  propertyType        String?
-  ownershipPercentage Float?  @default(100)
-  linkedDebtId        String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  @@unique([userId, name, type])
   @@index([userId])
-  @@index([type])
-  @@index([ticker])
-  @@index([coinSymbol])
-  @@map("assets")
+  @@index([deletedAt])
 }
 
 model Budget {
-  id         String    @id @default(cuid())
-  categoryId String
+  id         String   @id @default(uuid())
+  userId     String
+  categoryId String?
   amount     Float
   month      Int
   year       Int
-  userId     String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id])
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  @@unique([categoryId, month, year, userId])
+  @@unique([userId, categoryId, month, year])
   @@index([userId])
-  @@index([month, year])
-  @@map("budgets")
+  @@index([deletedAt])
 }
 
-model AiInsight {
-  id        String   @id @default(cuid())
-  type      String   // "spending_insight" | "budget_recommendation" | "net_worth_projection"
-  content   String   // JSON stringified
+model Portfolio {
+  id        String   @id @default(uuid())
   userId    String
+  name      String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets Asset[]
+
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+model Asset {
+  id            String   @id @default(uuid())
+  portfolioId   String
+  symbol        String
+  name          String?
+  type          String   // stock, crypto, fund, bond, other
+  quantity      Float
+  purchasePrice Float
+  purchaseDate  DateTime
+  currentPrice  Float?
+  lastUpdated   DateTime?
+  currency      String   @default("VND")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId])
+  @@index([symbol])
+  @@index([deletedAt])
+}
+
+model NewsArticle {
+  id          String   @id @default(uuid())
+  title       String
+  summary     String?
+  url         String
+  source      String?
+  imageUrl    String?
+  publishedAt DateTime
+  symbols     String?  // comma-separated related symbols
+  cachedAt    DateTime @default(now())
+
+  @@index([publishedAt])
+  @@index([symbols])
+}
+
+model SyncLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String   // create, update, delete
+  entityType String   // transaction, category, budget, asset
+  entityId   String
+  payload    String   // JSON string
+  status     String   @default("pending") // pending, synced, conflict, failed
+  syncedAt   DateTime?
+  createdAt  DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([type])
-  @@map("ai_insights")
-}
-
-model MarketPrice {
-  id          String   @id @default(cuid())
-  symbol      String
-  price       Float
-  change24h   Float?
-  type        String   // "stock" | "crypto"
-  lastUpdated DateTime @default(now())
-
-  @@unique([symbol, type])
-  @@index([symbol])
-  @@map("market_prices")
+  @@index([status])
+  @@index([entityType, entityId])
 }

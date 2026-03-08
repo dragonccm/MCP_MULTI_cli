@@ -1,34 +1,32 @@
-import { z } from "zod";
+import { z } from 'zod';
+
+const transactionTypes = ['income', 'expense', 'debt', 'receivable', 'asset'] as const;
+const transactionStatuses = ['completed', 'pending', 'cancelled'] as const;
 
 export const createTransactionSchema = z.object({
-  body: z.object({
-    amount: z.number().positive("Amount must be positive"),
-    type: z.enum(["income", "expense"]),
-    categoryId: z.string().min(1, "Category is required"),
-    date: z.string().datetime({ message: "Invalid date format" }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
-    note: z.string().max(500).optional(),
-  }),
+  type: z.enum(transactionTypes),
+  amount: z.number().positive('Amount must be positive'),
+  currency: z.string().default('VND'),
+  description: z.string().optional(),
+  date: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+  categoryId: z.string().uuid().optional(),
+  note: z.string().optional(),
+  status: z.enum(transactionStatuses).default('completed'),
+  metadata: z.string().optional(),
 });
 
-export const updateTransactionSchema = z.object({
-  params: z.object({ id: z.string().min(1) }),
-  body: z.object({
-    amount: z.number().positive().optional(),
-    type: z.enum(["income", "expense"]).optional(),
-    categoryId: z.string().min(1).optional(),
-    date: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
-    note: z.string().max(500).optional(),
-  }),
+export const updateTransactionSchema = createTransactionSchema.partial();
+
+export const transactionFilterSchema = z.object({
+  type: z.enum(transactionTypes).optional(),
+  categoryId: z.string().uuid().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  status: z.enum(transactionStatuses).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
 });
 
-export const listTransactionsSchema = z.object({
-  query: z.object({
-    page: z.string().optional(),
-    limit: z.string().optional(),
-    type: z.enum(["income", "expense"]).optional(),
-    categoryId: z.string().optional(),
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
-    search: z.string().optional(),
-  }),
-});
+export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
+export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
+export type TransactionFilterInput = z.infer<typeof transactionFilterSchema>;

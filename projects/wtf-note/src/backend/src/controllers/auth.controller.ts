@@ -1,73 +1,46 @@
-import { Request, Response, NextFunction } from "express";
-import { authService } from "../services/auth.service";
-import { sendSuccess } from "../utils/apiResponse";
-import { AuthRequest } from "../types";
+import { Request, Response, NextFunction } from 'express';
+import { authService } from '../services/auth.service';
+import { sendSuccess } from '../utils/apiResponse';
+import { AuthenticatedRequest } from '../types';
 
-export const authController = {
-  async register(req: Request, res: Response, next: NextFunction) {
+export class AuthController {
+  async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password, name } = req.body;
-      const result = await authService.register(email, password, name);
-      sendSuccess(res, result, "Registration successful", 201);
+      const result = await authService.register(req.body);
+      sendSuccess(res, result, 'Registration successful', 201);
     } catch (error) {
       next(error);
     }
-  },
+  }
 
-  async login(req: Request, res: Response, next: NextFunction) {
+  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password } = req.body;
-      const result = await authService.login(email, password);
-      sendSuccess(res, result, "Login successful");
+      const result = await authService.login(req.body);
+      sendSuccess(res, result, 'Login successful');
     } catch (error) {
       next(error);
     }
-  },
+  }
 
-  async refreshToken(req: Request, res: Response, next: NextFunction) {
+  async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { refreshToken } = req.body;
       const result = await authService.refreshToken(refreshToken);
-      sendSuccess(res, result, "Token refreshed");
+      sendSuccess(res, result, 'Token refreshed');
     } catch (error) {
       next(error);
     }
-  },
+  }
 
-  async logout(req: AuthRequest, res: Response, next: NextFunction) {
+  async getProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      await authService.logout(req.user!.userId);
-      sendSuccess(res, null, "Logged out successfully");
+      const userId = req.user!.userId;
+      const profile = await authService.getProfile(userId);
+      sendSuccess(res, profile, 'Profile retrieved');
     } catch (error) {
       next(error);
     }
-  },
+  }
+}
 
-  async getProfile(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      const profile = await authService.getProfile(req.user!.userId);
-      sendSuccess(res, profile, "Profile retrieved");
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  async updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      const profile = await authService.updateProfile(req.user!.userId, req.body);
-      sendSuccess(res, profile, "Profile updated");
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  async changePassword(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      const { oldPassword, newPassword } = req.body;
-      await authService.changePassword(req.user!.userId, oldPassword, newPassword);
-      sendSuccess(res, null, "Password changed successfully");
-    } catch (error) {
-      next(error);
-    }
-  },
-};
+export const authController = new AuthController();

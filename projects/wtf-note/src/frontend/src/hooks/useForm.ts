@@ -1,76 +1,100 @@
 import { useState, useCallback } from 'react';
-import type { z } from 'zod/v4';
+import { z } from 'zod';
 
-type FormErrors<T> = Partial<Record<keyof T, string>>;
+interface UseFormOptions<T extends z.ZodType> {
+  schema: T;
+  initialValues: z.infer<T>;
+  onSubmit: (values: z.infer<T>) => Promise<void>;
+}
 
-export function useForm<T extends Record<string, unknown>>(
-  initialValues: T,
-  schema?: z.ZodType<T>
-) {
-  const [values, setValues] = useState<T>(initialValues);
-  const [errors, setErrors] = useState<FormErrors<T>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+interface FormState<T> {
+  values: T;
+  errors: Partial<Record<keyof T, string>>;
+  isSubmitting: boolean;
+  submitError: string | null;
+}
 
-  const setValue = useCallback(
-    <K extends keyof T>(field: K, value: T[K]) => {
-      setValues((prev) => ({ ...prev, [field]: value }));
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    },
-    []
-  );
+export function useForm<T extends z.ZodType>({
+  schema,
+  initialValues,
+  onSubmit,
+}: UseFormOptions<T>) {
+  type FormValues = z.infer<T>;
+
+  const [state, setState] = useState<FormState<FormValues>>({
+    values: initialValues,
+    errors: {},
+    isSubmitting: false,
+    submitError: null,
+  });
+
+  const setValue = useCallback(<K extends keyof FormValues>(field: K, value: FormValues[K]) => {
+    setState((prev) => ({
+      ...prev,
+      values: { ...prev.values, [field]: value },
+      errors: { ...prev.errors, [field]: undefined },
+      submitError: null,
+    }));
+  }, []);
+
+  const setValues = useCallback((values: Partial<FormValues>) => {
+    setState((prev) => ({
+      ...prev,
+      values: { ...prev.values, ...values },
+      submitError: null,
+    }));
+  }, []);
 
   const validate = useCallback((): boolean => {
-    if (!schema) return true;
-    const result = schema.safeParse(values);
+    const result = schema.safeParse(state.values);
     if (result.success) {
-      setErrors({});
+      setState((prev) => ({ ...prev, errors: {} }));
       return true;
     }
-    const fieldErrors: FormErrors<T> = {};
+
+    const fieldErrors: Partial<Record<keyof FormValues, string>> = {};
     for (const issue of result.error.issues) {
-      const key = issue.path[0] as keyof T;
-      if (key && !fieldErrors[key]) {
-        fieldErrors[key] = issue.message;
+      const field = issue.path[0] as keyof FormValues;
+      if (!fieldErrors[field]) {
+        fieldErrors[field] = issue.message;
       }
     }
-    setErrors(fieldErrors);
+    setState((prev) => ({ ...prev, errors: fieldErrors }));
     return false;
-  }, [schema, values]);
+  }, [schema, state.values]);
 
-  const handleSubmit = useCallback(
-    async (onSubmit: (data: T) => Promise<void>) => {
-      if (!validate()) return;
-      setIsSubmitting(true);
-      try {
-        await onSubmit(values);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'An error occurred';
-        setErrors((prev) => ({ ...prev, _form: message } as FormErrors<T>));
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [validate, values]
-  );
+  const handleSubmit = useCallback(async () => {
+    if (!validate()) return;
+
+    setState((prev) => ({ ...prev, isSubmitting: true, submitError: null }));
+    try {
+      await onSubmit(state.values);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Đã xảy ra lỗi';
+      setState((prev) => ({ ...prev, submitError: message }));
+    } finally {
+      setState((prev) => ({ ...prev, isSubmitting: false }));
+    }
+  }, [validate, onSubmit, state.values]);
 
   const reset = useCallback(() => {
-    setValues(initialValues);
-    setErrors({});
+    setState({
+      values: initialValues,
+      errors: {},
+      isSubmitting: false,
+      submitError: null,
+    });
   }, [initialValues]);
 
   return {
-    values,
-    errors,
-    isSubmitting,
+    values: state.values,
+    errors: state.errors,
+    isSubmitting: state.isSubmitting,
+    submitError: state.submitError,
     setValue,
+    setValues,
     validate,
     handleSubmit,
     reset,
-    setValues,
-    setErrors,
   };
 }

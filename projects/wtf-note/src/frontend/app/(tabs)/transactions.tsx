@@ -1,35 +1,39 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import { router } from 'expo-router';
-import { Card, Chip, EmptyState, Skeleton } from '../../src/components/ui';
-import { Button } from '../../src/components/ui';
-import { useAppStore, useAuthStore } from '../../src/stores';
-import { formatCurrency, formatDate } from '../../src/utils';
-import { COLORS, SPACING, FONT_SIZE, FONT_WEIGHT, BORDER } from '../../src/theme';
-import type { TransactionType } from '../../src/types';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { useRouter } from 'expo-router';
+import { COLORS, SPACING, FONT_SIZE, BORDER, SHADOW } from '../../src/constants';
+import { TransactionItem, BrutalButton, LoadingState, EmptyState } from '../../src/components/ui';
+import { useTransactionStore } from '../../src/stores';
+import type { TransactionType, Transaction } from '../../src/types';
+
+const TYPE_FILTERS: { label: string; value: TransactionType | 'all' }[] = [
+  { label: 'Tất cả', value: 'all' },
+  { label: 'Thu nhập', value: 'income' },
+  { label: 'Chi tiêu', value: 'expense' },
+  { label: 'Nợ', value: 'debt' },
+  { label: 'Phải thu', value: 'receivable' },
+  { label: 'Tài sản', value: 'asset' },
+];
 
 export default function TransactionsScreen() {
-  const currency = useAuthStore((s) => s.user?.currencyPreference ?? 'VND');
-  const {
-    transactions,
-    transactionsLoading,
-    fetchTransactions,
-    removeTransaction,
-  } = useAppStore();
-  const [filter, setFilter] = useState<TransactionType | 'all'>('all');
+  const router = useRouter();
+  const { transactions, isLoading, fetchTransactions, setFilter, pagination } = useTransactionStore();
+  const [activeFilter, setActiveFilter] = useState<TransactionType | 'all'>('all');
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchTransactions();
   }, [fetchTransactions]);
+
+  const handleFilterChange = useCallback((value: TransactionType | 'all') => {
+    setActiveFilter(value);
+    if (value === 'all') {
+      setFilter({});
+    } else {
+      setFilter({ type: value });
+    }
+    fetchTransactions();
+  }, [setFilter, fetchTransactions]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -37,104 +41,89 @@ export default function TransactionsScreen() {
     setRefreshing(false);
   };
 
-  const filtered =
-    filter === 'all'
-      ? transactions
-      : transactions.filter((t) => t.type === filter);
-
-  const handleDelete = (id: string) => {
-    Alert.alert('Delete', 'Remove this transaction?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => removeTransaction(id),
-      },
-    ]);
+  const loadMore = () => {
+    if (pagination && pagination.page < pagination.totalPages) {
+      fetchTransactions(pagination.page + 1);
+    }
   };
+
+  const renderItem = ({ item }: { item: Transaction }) => (
+    <TransactionItem
+      transaction={item}
+      onPress={() => router.push(`/transaction/${item.id}`)}
+      style={styles.item}
+    />
+  );
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.filters}>
-          <Chip label="All" selected={filter === 'all'} onPress={() => setFilter('all')} />
-          <Chip label="Income" selected={filter === 'income'} onPress={() => setFilter('income')} />
-          <Chip label="Expense" selected={filter === 'expense'} onPress={() => setFilter('expense')} />
-        </View>
-        <Button
-          title="+ Add"
-          onPress={() => router.push('/transactions/add')}
-          variant="primary"
-          size="sm"
+      {/* Filter Chips */}
+      <View style={styles.filterContainer}>
+        <FlatList
+          horizontal
+          data={TYPE_FILTERS}
+          keyExtractor={(item) => item.value}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterList}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                activeFilter === item.value && styles.filterChipActive,
+              ]}
+              onPress={() => handleFilterChange(item.value)}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  activeFilter === item.value && styles.filterTextActive,
+                ]}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          )}
         />
       </View>
 
-      <ScrollView
-        style={styles.list}
+      {/* Transaction List */}
+      <FlatList
+        data={transactions}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
         }
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.3}
+        ListEmptyComponent={
+          isLoading ? (
+            <LoadingState />
+          ) : (
+            <EmptyState
+              icon="📭"
+              title="Chưa có giao dịch"
+              description="Thêm giao dịch đầu tiên để bắt đầu theo dõi tài chính"
+              action={
+                <BrutalButton
+                  title="Thêm giao dịch"
+                  onPress={() => router.push('/transaction/create')}
+                />
+              }
+            />
+          )
+        }
+      />
+
+      {/* FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push('/transaction/create')}
+        activeOpacity={0.8}
       >
-        {transactionsLoading && transactions.length === 0 ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} height={60} style={{ marginBottom: SPACING.sm }} />
-          ))
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            title="No transactions yet"
-            subtitle="Tap + to add your first transaction"
-            actionLabel="Add Transaction"
-            onAction={() => router.push('/transactions/add')}
-          />
-        ) : (
-          filtered.map((tx) => (
-            <TouchableOpacity
-              key={tx.id}
-              style={styles.txItem}
-              onLongPress={() => handleDelete(tx.id)}
-              onPress={() => router.push(`/transactions/${tx.id}`)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.txLeft}>
-                <View style={styles.txRow}>
-                  <View
-                    style={[
-                      styles.typeBadge,
-                      {
-                        backgroundColor:
-                          tx.type === 'income' ? COLORS.successLight : COLORS.dangerLight,
-                      },
-                    ]}
-                  >
-                    <Text style={styles.typeText}>
-                      {tx.type === 'income' ? '↑' : '↓'}
-                    </Text>
-                  </View>
-                  <View style={styles.txInfo}>
-                    <Text style={styles.txNote} numberOfLines={1}>
-                      {tx.note ?? 'Transaction'}
-                    </Text>
-                    <Text style={styles.txDate}>{formatDate(tx.date)}</Text>
-                  </View>
-                </View>
-              </View>
-              <Text
-                style={[
-                  styles.txAmount,
-                  {
-                    color:
-                      tx.type === 'income' ? COLORS.income : COLORS.expense,
-                  },
-                ]}
-              >
-                {tx.type === 'income' ? '+' : '-'}
-                {formatCurrency(tx.amount, currency)}
-              </Text>
-            </TouchableOpacity>
-          ))
-        )}
-      </ScrollView>
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -144,72 +133,62 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: BORDER.width,
+  filterContainer: {
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 2,
     borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.surface,
+    paddingVertical: SPACING.sm,
   },
-  filters: {
-    flexDirection: 'row',
+  filterList: {
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.sm,
   },
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.xxl,
-  },
-  txItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
+  filterChip: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
     borderWidth: BORDER.width,
     borderColor: COLORS.border,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
+    borderRadius: BORDER.radiusFull,
+    backgroundColor: COLORS.surface,
   },
-  txLeft: {
-    flex: 1,
+  filterChipActive: {
+    backgroundColor: COLORS.primary,
+    ...SHADOW.brutalSm,
   },
-  txRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  typeBadge: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: BORDER.width,
-    borderColor: COLORS.border,
-    marginRight: SPACING.sm,
-  },
-  typeText: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.black,
-  },
-  txInfo: {
-    flex: 1,
-  },
-  txNote: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
+  filterText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
     color: COLORS.text,
   },
-  txDate: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textMuted,
-    marginTop: 2,
+  filterTextActive: {
+    color: COLORS.textOnPrimary,
   },
-  txAmount: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.black,
-    marginLeft: SPACING.sm,
+  listContent: {
+    padding: SPACING.lg,
+    paddingBottom: 100,
+    gap: SPACING.md,
+  },
+  item: {
+    marginBottom: 0,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: SPACING.xxl,
+    right: SPACING.xl,
+    width: 56,
+    height: 56,
+    borderRadius: BORDER.radiusFull,
+    backgroundColor: COLORS.primary,
+    borderWidth: BORDER.widthThick,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOW.brutalLg,
+  },
+  fabText: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: COLORS.textOnPrimary,
+    marginTop: -2,
   },
 });

@@ -1,6 +1,6 @@
-import { Response } from "express";
+import { Response } from 'express';
 
-interface PaginationMeta {
+export interface PaginationInfo {
   page: number;
   limit: number;
   total: number;
@@ -11,18 +11,24 @@ interface ApiResponseData<T> {
   success: boolean;
   data?: T;
   message: string;
-  pagination?: PaginationMeta;
+  pagination?: PaginationInfo;
 }
 
 export function sendSuccess<T>(
   res: Response,
   data: T,
-  message = "Success",
+  message = 'Success',
   statusCode = 200,
-  pagination?: PaginationMeta
+  pagination?: PaginationInfo
 ): void {
-  const response: ApiResponseData<T> = { success: true, data, message };
-  if (pagination) response.pagination = pagination;
+  const response: ApiResponseData<T> = {
+    success: true,
+    data,
+    message,
+  };
+  if (pagination) {
+    response.pagination = pagination;
+  }
   res.status(statusCode).json(response);
 }
 
@@ -30,28 +36,20 @@ export function sendError(
   res: Response,
   message: string,
   statusCode = 400,
-  errors?: Record<string, string[]>
+  errors?: unknown
 ): void {
-  const response: ApiResponseData<null> & { errors?: Record<string, string[]> } = {
+  res.status(statusCode).json({
     success: false,
     message,
-  };
-  if (errors) response.errors = errors;
-  res.status(statusCode).json(response);
+    errors,
+  });
 }
 
-export function sendPaginated<T>(
-  res: Response,
-  data: T[],
-  total: number,
-  page: number,
-  limit: number,
-  message = "Success"
-): void {
-  sendSuccess(res, data, message, 200, {
+export function buildPagination(page: number, limit: number, total: number): PaginationInfo {
+  return {
     page,
     limit,
     total,
     totalPages: Math.ceil(total / limit),
-  });
+  };
 }

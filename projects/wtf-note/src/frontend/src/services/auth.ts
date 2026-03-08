@@ -1,24 +1,28 @@
-import { apiClient } from './api';
-import type {
-  AuthResponse,
-  LoginRequest,
-  RegisterRequest,
-  User,
-} from '../types';
+import apiClient from './apiClient';
+import type { ApiResponse, AuthResponse, User } from '../types';
 
 export const authService = {
-  login: (data: LoginRequest) =>
-    apiClient.post<AuthResponse>('/auth/login', data),
+  async login(email: string, password: string): Promise<AuthResponse> {
+    const { data } = await apiClient.post<ApiResponse<AuthResponse>>('/auth/login', { email, password });
+    return data.data;
+  },
 
-  register: (data: RegisterRequest) =>
-    apiClient.post<AuthResponse>('/auth/register', data),
+  async register(name: string, email: string, password: string): Promise<AuthResponse> {
+    const { data } = await apiClient.post<ApiResponse<AuthResponse>>('/auth/register', { name, email, password });
+    return data.data;
+  },
 
-  logout: () => apiClient.post<void>('/auth/logout'),
+  async getProfile(): Promise<User> {
+    const { data } = await apiClient.get<ApiResponse<User>>('/auth/profile');
+    return data.data;
+  },
 
-  refreshToken: () => apiClient.post<AuthResponse>('/auth/refresh'),
+  async updateProfile(updates: Partial<Pick<User, 'name' | 'currency'>>): Promise<User> {
+    const { data } = await apiClient.put<ApiResponse<User>>('/profile', updates);
+    return data.data;
+  },
 
-  getProfile: () => apiClient.get<User>('/users/profile'),
-
-  updateProfile: (data: Partial<User>) =>
-    apiClient.put<User>('/users/profile', data),
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await apiClient.put('/profile/password', { currentPassword, newPassword });
+  },
 };
