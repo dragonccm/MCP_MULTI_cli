@@ -1,0 +1,8 @@
+{
+  "po": "copilot",
+  "frontend": "qwen",
+  "backend": "qwen",
+  "reviewer": "copilot",
+  "release": "copilot",
+  "coder": "copilot"
+}

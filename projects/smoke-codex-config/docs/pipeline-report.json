@@ -1,0 +1,20 @@
+{
+  "requirement": "smoke config check",
+  "success": false,
+  "elapsed": "0.1s",
+  "phases": {
+    "po": {
+      "status": "failed",
+      "attempts": 1,
+      "error": "spawn EPERM"
+    }
+  },
+  "errors": [
+    {
+      "phase": "po",
+      "attempt": 1,
+      "error": "spawn EPERM"
+    }
+  ],
+  "timestamp": "2026-03-08T16:10:50.514Z"
+}
